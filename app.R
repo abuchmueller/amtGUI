@@ -5,11 +5,11 @@ library(amt)
 
 
 # Example data
-fisher <- read.csv("data/fisher_1016.csv")
-fisher_day <- read.csv("data/fisher_1016_day.csv")
-fisher_night <- read.csv("data/fisher_1016_night.csv")
-deer_ny <- read.csv("data/Martes pennanti LaPoint New York.csv")
-land_use <- raster::raster("data/landuse_study_area.tif")
+fisher_id_1016 <- read.csv("data/fisher_1016.csv")
+fisher_id_1016_day <- read.csv("data/fisher_1016_day.csv")
+fisher_id_1016_night <- read.csv("data/fisher_1016_night.csv")
+fisher_ny <- read.csv("data/Martes pennanti LaPoint New York.csv")
+land_use_fisher_ny <- raster::raster("data/landuse_study_area.tif")
 
 # EPSG Codes
 epsg_data <- rgdal::make_EPSG()
@@ -85,8 +85,8 @@ ui <- fluidPage(
           selectInput(
             inputId = "ex_data_csv",
             label = "Choose Example Data:",
-            choices = c("None", "Deer NY", "Fisher", "Fisher Day",
-                        "Fisher Night")
+            choices = c("None", "Fisher NY", "Fisher ID 1016", "Fisher ID 1016 Day",
+                        "Fisher ID 1016 Night")
           )#,
           # # Input: Select EPSG Code
           # selectInput(
@@ -123,7 +123,7 @@ ui <- fluidPage(
           selectInput(
             inputId = "ex_data_tif",
             label = "Choose Example Data:",
-            choices = c("None", "Land Use Study Area")
+            choices = c("None", "Fisher NY Land Use Area")
           )#,
           # Input: Select EPSG Code
           # selectInput(
@@ -214,10 +214,10 @@ observeEvent(input$reset, {
 csvInput <- reactive({
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
-            "Deer NY" = deer_ny,
-            "Fisher" = fisher,
-            "Fisher Day" = fisher_day,
-            "Fisher Night" = fisher_night,
+            "Fisher NY" = fisher_ny,
+            "Fisher ID 1016" = fisher_id_1016,
+            "Fisher ID 1016 Day" = fisher_id_1016_day,
+            "Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
@@ -227,10 +227,10 @@ csvInput <- reactive({
     return(csv_uploaded)
   } else if (values_csv$upload_state == 'reset') {
     switch (input$ex_data_csv,
-            "Deer NY" = deer_ny,
-            "Fisher" = fisher,
-            "Fisher Day" = fisher_day,
-            "Fisher Night" = fisher_night,
+            "Fisher NY" = fisher_ny,
+            "Fisher ID 1016" = fisher_id_1016,
+            "Fisher ID 1016 Day" = fisher_id_1016_day,
+            "Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   }
@@ -346,14 +346,14 @@ observeEvent(input$reset_tif, {
 tifInput <- reactive({
   if (is.null(values_tif$upload_state)){
     switch (input$ex_data_tif,
-            "Land Use Study Area" = land_use,
+            "Fisher NY Land Use Area" = land_use_fisher_ny,
             "None" = return()
     )
   } else if (values_tif$upload_state == 'uploaded') {
     raster::raster(x = input$dataset_tif$datapath)
   } else if (values_tif$upload_state == 'reset') {
     switch (input$ex_data_tif,
-            "Land Use Study Area" = land_use,
+            "Fisher NY Land Use Area" = land_use_fisher_ny,
             "None" = return()
     )
   }
