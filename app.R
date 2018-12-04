@@ -5,10 +5,12 @@ library(amt)
 
 
 # Example data
-fisher_id_1016 <- read.csv("data/fisher_1016.csv")
-fisher_id_1016_day <- read.csv("data/fisher_1016_day.csv")
-fisher_id_1016_night <- read.csv("data/fisher_1016_night.csv")
-fisher_ny <- read.csv("data/Martes pennanti LaPoint New York.csv")
+fisher_id_1016 <- read_csv("data/fisher_1016.csv")
+fisher_id_1016_day <- read_csv("data/fisher_1016_day.csv")
+fisher_id_1016_night <- read_csv("data/fisher_1016_night.csv")
+fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
+# Rename columns containing special characters e.g. "-"
+names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
 land_use_fisher_ny <- raster::raster("data/landuse_study_area.tif")
 
 # EPSG Codes
@@ -208,9 +210,7 @@ observeEvent(input$dataset_csv, {
 observeEvent(input$reset, {
   values_csv$upload_state <- 'reset'
 })
-# observeEvent(input$clean, {
-#   values_csv$upload_state <- 'clean'
-# })
+
 csvInput <- reactive({
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
@@ -221,9 +221,33 @@ csvInput <- reactive({
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
-    csv_uploaded <- read.csv(file = input$dataset_csv$datapath, 
-                             header = input$header, sep = input$sep, 
-                             quote = input$quote) 
+    # Comma separated
+    if (input$sep == ",") {
+      csv_uploaded <- read_csv(file = input$dataset_csv$datapath, 
+                               col_names = input$header,
+                               quote = input$quote)
+      # Rename columns containing special characters e.g. "-"
+      names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
+    }
+    # Semicolon separated
+    if (input$sep == ";") {
+      csv_uploaded <- read_csv2(file = input$dataset_csv$datapath,
+                                col_names = input$header,
+                                quote = input$quote)
+      # Rename columns containing special characters e.g. "-"
+      names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
+    }
+    # Tab separated
+    if (input$sep == "\t") {
+      csv_uploaded <- read_tsv(file = input$dataset_csv$datapath, 
+                               col_names = input$header,
+                               quote = input$quote)
+      # Rename columns containing special characters e.g. "-"
+      names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
+    }
+    # csv_uploaded <- read.csv(file = input$dataset_csv$datapath, 
+    #                          header = input$header, sep = input$sep, 
+    #                          quote = input$quote) 
     return(csv_uploaded)
   } else if (values_csv$upload_state == 'reset') {
     switch (input$ex_data_csv,
@@ -251,7 +275,8 @@ output$x <- renderUI({
     selectInput(
       inputId = "x",
       label = "x (location-long)",
-      choices = colnames(csvInput())
+      choices = c("", colnames(csvInput())),
+      selected = NULL
     )
   }
 })
@@ -263,7 +288,8 @@ output$y <- renderUI({
     selectInput(
       inputId = "y",
       label = "y (location-lat)",
-      choices = colnames(csvInput())
+      choices = c("", colnames(csvInput())),
+      selected = NULL
     )
   }
 })
@@ -275,8 +301,8 @@ output$ts <- renderUI({
     selectInput(
       inputId = "ts",
       label = "ts (timestamp)",
-      choices = colnames(csvInput())#,
-      #selected = "timestamp"
+      choices = c("", colnames(csvInput())),
+      selected = NULL
     )
   }
 })
@@ -288,7 +314,8 @@ output$id <- renderUI({
     selectInput(
       inputId = "id",
       label = "id (individual-local-identifier)",
-      choices = colnames(csvInput())
+      choices = c("", colnames(csvInput())),
+      selected = NULL
     )
   }
 })
@@ -380,17 +407,17 @@ epsg_code <- reactive({
 
 # Create a track: choose columns
 dat <- reactive({
-  if (!is.null(tifInput()) && !is.null(csvInput())) {
-    # Omit NAs in input columns
-    csvInput()[complete.cases(csvInput()[, c(input$x, input$y, input$ts, 
-                                             input$id) ]), ] %>%
-      select(x = input$x, y = input$y, ts = input$ts, id = input$id)
+  if (!is.null(csvInput()) && !is.null(tifInput())) {
+    # Geometrically subset raster and omit NAs in subset
+      csvInput() %>% 
+      select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
+      na.omit()
   }
   })
 
 # Create a track
 trk <- reactive({
-  if (!is.null(tifInput()) && !is.null(csvInput())) {
+  if (!is.null(dat())) {
     # dat <- csvInput()[!is.na(csvInput()[, input$x]), ] %>% # suffiecient condition??? 
     #   select(x = input$x, y = input$y, id = input$id, ts = input$ts)
     #return(dat)
