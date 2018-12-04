@@ -272,11 +272,20 @@ output$x <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    selectInput(
-      inputId = "x",
-      label = "x (location-long)",
-      choices = c("", colnames(csvInput())),
-      selected = NULL
+    # selectInput(
+    #   inputId = "x",
+    #   label = "x (location-long)",
+    #   choices = c("", colnames(csvInput())),
+    #   selected = NULL
+    # )
+    selectizeInput(
+      inputId = 'x', 
+      label = "x (location-long)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign location-long', # 'Please select an option below'
+        onInitialize = I('function() { this.setValue(""); }')
+      )
     )
   }
 })
@@ -285,11 +294,20 @@ output$y <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    selectInput(
-      inputId = "y",
-      label = "y (location-lat)",
-      choices = c("", colnames(csvInput())),
-      selected = NULL
+    # selectInput(
+    #   inputId = "y",
+    #   label = "y (location-lat)",
+    #   choices = c("", colnames(csvInput())),
+    #   selected = NULL
+    # )
+    selectizeInput(
+      inputId = 'y', 
+      label = "y (location-lat)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign location-lat',
+        onInitialize = I('function() { this.setValue(""); }')
+      )
     )
   }
 })
@@ -298,11 +316,20 @@ output$ts <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    selectInput(
-      inputId = "ts",
-      label = "ts (timestamp)",
-      choices = c("", colnames(csvInput())),
-      selected = NULL
+    # selectInput(
+    #   inputId = "ts",
+    #   label = "ts (timestamp)",
+    #   choices = c("", colnames(csvInput())),
+    #   selected = NULL
+    # )
+    selectizeInput(
+      inputId = 'ts', 
+      label = "ts (timestamp)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign timestamp',
+        onInitialize = I('function() { this.setValue(""); }')
+      )
     )
   }
 })
@@ -311,11 +338,20 @@ output$id <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    selectInput(
-      inputId = "id",
-      label = "id (individual-local-identifier)",
-      choices = c("", colnames(csvInput())),
-      selected = NULL
+    # selectInput(
+    #   inputId = "id",
+    #   label = "id (individual-local-identifier)",
+    #   choices = c("", colnames(csvInput())),
+    #   selected = NULL
+    # )
+    selectizeInput(
+      inputId = 'id', 
+      label = "id (individual-local-identifier)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign ID',
+        onInitialize = I('function() { this.setValue(""); }')
+      )
     )
   }
 })
@@ -431,36 +467,35 @@ trk <- reactive({
 
 # Display data frame or summary of data
 output$contents_trk <- DT::renderDataTable({
-  
-  if (is.null(trk())) {
-    return()
-  } else {
-    
-    if (input$display_trk == "Data Frame") {
-      # Selected number of records shown per page (range to chose from dependent
-      # on data set size)
-      page_length <-  if (nrow(trk()) > 100){
-        c(10, 15, 20, 50, 100, nrow(trk()) )
-      } else if (nrow(trk()) <= 10) {
-        nrow(trk())
-      } else if (nrow(trk()) <= 15) {
-        c(10, nrow(trk()) )
-      } else if (nrow(trk()) <= 20) {
-        c(10, 15, nrow(trk()) )
-      } else if (nrow(trk()) <= 50) {
-        c(10, 15, 20, nrow(trk()) )
-      } else if (nrow(trk()) <= 100) {
-        c(10, 15, 20, 50, nrow(trk()) )
-      }
-      DT::datatable(trk(), rownames = FALSE,
-                    options = list(
-                      lengthMenu = page_length,
-                      pageLength = 15
-                    )
-      )
+  validate(
+    need(input$x, 'Please assign location-long.'),
+    need(input$y, 'Please assign location-lat.'),
+    need(input$ts, 'Please assign timestamp.'),
+    need(input$id, 'Please assign ID.')
+  )
+  if (input$display_trk == "Data Frame") {
+    # Selected number of records shown per page (range to chose from dependent
+    # on data set size)
+    page_length <-  if (nrow(trk()) > 100){
+      c(10, 15, 20, 50, 100, nrow(trk()) )
+    } else if (nrow(trk()) <= 10) {
+      nrow(trk())
+    } else if (nrow(trk()) <= 15) {
+      c(10, nrow(trk()) )
+    } else if (nrow(trk()) <= 20) {
+      c(10, 15, nrow(trk()) )
+    } else if (nrow(trk()) <= 50) {
+      c(10, 15, 20, nrow(trk()) )
+    } else if (nrow(trk()) <= 100) {
+      c(10, 15, 20, 50, nrow(trk()) )
     }
-    
-  }  
+    DT::datatable(trk(), rownames = FALSE,
+                  options = list(
+                    lengthMenu = page_length,
+                    pageLength = 15
+                  )
+    )
+  }
 })
 # Summary
 output$summary_trk <- renderPrint({
