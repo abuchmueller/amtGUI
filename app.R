@@ -5,14 +5,10 @@ library(amt)
 
 
 # Example data
-# For some reason "amtGUI/" in path necessary for "Run App" button to work!!!
 fisher <- read.csv("data/fisher_1016.csv")
 fisher_day <- read.csv("data/fisher_1016_day.csv")
 fisher_night <- read.csv("data/fisher_1016_night.csv")
-deer_ny <- read.csv("data/Martes pennanti LaPoint New York.csv", 
-                    #stringsAsFactors = FALSE, 
-                    check.names = TRUE)
-
+deer_ny <- read.csv("data/Martes pennanti LaPoint New York.csv")
 land_use <- raster::raster("data/landuse_study_area.tif")
 
 # EPSG Codes
