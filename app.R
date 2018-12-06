@@ -5,9 +5,9 @@ library(amt)
 
 
 # Example data
-fisher_id_1016 <- read_csv("data/fisher_1016.csv")
-fisher_id_1016_day <- read_csv("data/fisher_1016_day.csv")
-fisher_id_1016_night <- read_csv("data/fisher_1016_night.csv")
+#fisher_id_1016 <- read_csv("data/fisher_1016.csv")
+#fisher_id_1016_day <- read_csv("data/fisher_1016_day.csv")
+#fisher_id_1016_night <- read_csv("data/fisher_1016_night.csv")
 fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
@@ -80,8 +80,10 @@ ui <- fluidPage(
           selectInput(
             inputId = "ex_data_csv",
             label = "Choose Example Data:",
-            choices = c("None", "Fisher NY", "Fisher ID 1016", "Fisher ID 1016 Day",
-                        "Fisher ID 1016 Night")
+            choices = c("None", "Fisher NY"#, 
+                        #"Fisher ID 1016", "Fisher ID 1016 Day", 
+                        #"Fisher ID 1016 Night"
+                        )
           ),
           # Input: Select EPSG Code
           selectInput(
@@ -145,16 +147,17 @@ ui <- fluidPage(
           uiOutput(outputId = "ts"),
           uiOutput(outputId = "id"),
           tags$hr(),
+          # Transform EPSG Codes of CSV and TIF
+          uiOutput(outputId = "epsg_trk"),
+          uiOutput(outputId = "id_trk"),
+          tags$hr(),
           #Input: Select data table or summary of data set
           radioButtons(
             inputId = "display_trk",
             label = "Display",
             choices = c("Data Frame", "Summary"),
             selected = "Data Frame"
-          ),
-          tags$hr(),
-          # Transform EPSG Codes of CSV and TIF
-          uiOutput(outputId = "epsg_trk")
+          )
           ),
           mainPanel = mainPanel(
             DT::dataTableOutput(outputId = "contents_trk"),
@@ -199,9 +202,9 @@ csvInput <- reactive({
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
-            "Fisher ID 1016" = fisher_id_1016,
-            "Fisher ID 1016 Day" = fisher_id_1016_day,
-            "Fisher ID 1016 Night" = fisher_id_1016_night,
+            #"Fisher ID 1016" = fisher_id_1016,
+            #"Fisher ID 1016 Day" = fisher_id_1016_day,
+            #"Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
@@ -236,9 +239,9 @@ csvInput <- reactive({
   } else if (values_csv$upload_state == 'reset') {
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
-            "Fisher ID 1016" = fisher_id_1016,
-            "Fisher ID 1016 Day" = fisher_id_1016_day,
-            "Fisher ID 1016 Night" = fisher_id_1016_night,
+            #"Fisher ID 1016" = fisher_id_1016,
+            #"Fisher ID 1016 Day" = fisher_id_1016_day,
+            #"Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   }
@@ -253,9 +256,7 @@ output$track_head <- renderText({
 })
 # Choose x (location-long)
 output$x <- renderUI({
-  if (is.null(csvInput())) {
-    return()
-  } else {
+  if (!is.null(csvInput())) {
     selectizeInput(
       inputId = 'x', 
       label = "x (location-long)", 
@@ -269,9 +270,7 @@ output$x <- renderUI({
 })
 # Choose y (location-lat)
 output$y <- renderUI({
-  if (is.null(csvInput())) {
-    return()
-  } else {
+  if (!is.null(csvInput())) {
     selectizeInput(
       inputId = 'y', 
       label = "y (location-lat)", 
@@ -285,9 +284,7 @@ output$y <- renderUI({
 })
 # ts (timestamp)
 output$ts <- renderUI({
-  if (is.null(csvInput())) {
-    return()
-  } else {
+  if (!is.null(csvInput())) {
     selectizeInput(
       inputId = 'ts', 
       label = "ts (timestamp)", 
@@ -301,9 +298,7 @@ output$ts <- renderUI({
 })
 # id (individual-local-identifier)
 output$id <- renderUI({
-  if (is.null(csvInput())) {
-    return()
-  } else {
+  if (!is.null(csvInput())) {
     selectizeInput(
       inputId = 'id', 
       label = "id (individual-local-identifier)", 
@@ -322,24 +317,28 @@ output$contents <- DT::renderDataTable({
       if (input$display == "Data Frame") {
         # Selected number of records shown per page (range to chose from dependent
         # on data set size)
+        # Alternative not dependent on data set size: 
+        # list(c(5, 15, 50, -1), c('5', '15', '50', 'All'))
         page_length <-  if (nrow(csvInput()) > 100){
-          c(10, 15, 20, 50, 100, nrow(csvInput()) )
-        } else if (nrow(csvInput()) <= 10) {
+          c(5, 10, 15, 20, 50, 100, nrow(csvInput()))
+        } else if (nrow(csvInput()) <= 5) {
           nrow(csvInput())
+        } else if (nrow(csvInput()) <= 10) {
+          c(5, nrow(csvInput()))
         } else if (nrow(csvInput()) <= 15) {
-          c(10, nrow(csvInput()) )
+          c(5, 10, nrow(csvInput()))
         } else if (nrow(csvInput()) <= 20) {
-          c(10, 15, nrow(csvInput()) )
+          c(5, 10, 15, nrow(csvInput()))
         } else if (nrow(csvInput()) <= 50) {
-          c(10, 15, 20, nrow(csvInput()) )
+          c(5, 10, 15, 20, nrow(csvInput()))
         } else if (nrow(csvInput()) <= 100) {
-          c(10, 15, 20, 50, nrow(csvInput()) )
+          c(5, 10, 15, 20, 50, nrow(csvInput()))
         }
         DT::datatable(csvInput(), 
                       rownames = FALSE,
                       options = list(
                         lengthMenu = page_length,
-                        pageLength = 15
+                        pageLength = 5
                       )
         )
       }
@@ -424,9 +423,7 @@ env <- reactive({
 # Equivalent of View(df) for shiny???
 output$contents_tif <- reactive({
   
-  if (is.null(tifInput())) {
-    return()
-  } else {
+  if (!is.null(tifInput())) {
     #tifInput()
     validate(need(input$epsg_trk, ''))
     raster::projection(env())
@@ -447,7 +444,19 @@ output$epsg_trk <- renderUI({
     selected = input$epsg_tif
   )
 })
-
+# Filter IDs of the track
+output$id_trk <- renderUI({
+  validate(
+    need(input$id, '')
+  )
+  selectizeInput(
+    inputId = "id_trk", 
+    label = "Select ID(s):",
+    choices = sort(unique(dat()$id)), 
+    multiple = TRUE,
+    selected = sort(unique(dat()$id))[1:length(unique(dat()$id))]
+  )
+})
 # Create a track: choose columns
 dat <- reactive({
   if (!is.null(csvInput()) && !is.null(tifInput())) {
@@ -457,21 +466,26 @@ dat <- reactive({
       na.omit()
   }
   })
-
 # Create a track
 trk <- reactive({
   if (!is.null(dat())) {
+    validate(
+      need(input$id_trk, "Please select at least one ID.")
+    )
+    # Assign known EPSG Code to tracking data
     track <- make_track(dat(), x, y, ts, id = id,
                         crs = sp::CRS(paste("+init=epsg:", input$epsg_csv, 
                                             sep = ''))
     )
+    # Subset filtered ID(s)
+    track <- track[track$id %in% input$id_trk, ]
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
-      return(track)
+      track
     } else {
-    transform_coords(track, sp::CRS(paste("+init=epsg:", input$epsg_trk, 
-                                          sep = ''))
-    )
+      transform_coords(track, sp::CRS(paste("+init=epsg:", 
+                                            input$epsg_trk, sep = ''))
+      )
     }
   }
 })
@@ -487,23 +501,25 @@ output$contents_trk <- DT::renderDataTable({
   if (input$display_trk == "Data Frame") {
     # Selected number of records shown per page (range to chose from dependent
     # on data set size)
+    # Alternative not dependent on data set size: 
+    # list(c(5, 15, 50, -1), c('5', '15', '50', 'All'))
     page_length <-  if (nrow(trk()) > 100){
-      c(10, 15, 20, 50, 100, nrow(trk()) )
+      c(10, 15, 20, 50, 100, nrow(trk()))
     } else if (nrow(trk()) <= 10) {
       nrow(trk())
     } else if (nrow(trk()) <= 15) {
-      c(10, nrow(trk()) )
+      c(10, nrow(trk()))
     } else if (nrow(trk()) <= 20) {
-      c(10, 15, nrow(trk()) )
+      c(10, 15, nrow(trk()))
     } else if (nrow(trk()) <= 50) {
-      c(10, 15, 20, nrow(trk()) )
+      c(10, 15, 20, nrow(trk()))
     } else if (nrow(trk()) <= 100) {
-      c(10, 15, 20, 50, nrow(trk()) )
+      c(10, 15, 20, 50, nrow(trk()))
     }
     DT::datatable(trk(), rownames = FALSE,
                   options = list(
                     lengthMenu = page_length,
-                    pageLength = 15
+                    pageLength = 10
                   )
     )
   }
