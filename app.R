@@ -75,13 +75,6 @@ ui <- fluidPage(
             choices = c("Data Frame", "Summary"),
             selected = "Data Frame"
           ),
-          # # Create a track
-          # h4(textOutput(outputId = "track_head")),
-          # #h4("Create a track"),
-          # uiOutput(outputId = "x"),
-          # uiOutput(outputId = "y"),
-          # uiOutput(outputId = "id"),
-          # uiOutput(outputId = "ts"),
           tags$hr(),
           # Example Datasets
           selectInput(
@@ -89,14 +82,14 @@ ui <- fluidPage(
             label = "Choose Example Data:",
             choices = c("None", "Fisher NY", "Fisher ID 1016", "Fisher ID 1016 Day",
                         "Fisher ID 1016 Night")
-          )#,
-          # # Input: Select EPSG Code
-          # selectInput(
-          #   inputId = "epsg",
-          #   label = "Map with EPSG Code",
-          #   choices = epsg_data$code, #rgdal::make_EPSG()["code"]
-          #   selected = 4326
-          # )
+          ),
+          # Input: Select EPSG Code
+          selectInput(
+            inputId = "epsg_csv",
+            label = "Assign EPSG Code",
+            choices = na.omit(epsg_data$code), #rgdal::make_EPSG()["code"]
+            selected = 4326
+          )
         ),
         mainPanel = mainPanel(
           DT::dataTableOutput(outputId = "contents"),
@@ -126,13 +119,9 @@ ui <- fluidPage(
             inputId = "ex_data_tif",
             label = "Choose Example Data:",
             choices = c("None", "Fisher NY Land Use Area")
-          )#,
-          # Input: Select EPSG Code
-          # selectInput(
-          #   inputId = "epsg",
-          #   label = "Map with EPSG Code",
-          #   choices = epsg$code #rgdal::make_EPSG()["code"]
-          # )
+          ),
+          # EPSG Code TIF
+          uiOutput(outputId = "epsg_tif")
         ),
         mainPanel = mainPanel(
           verbatimTextOutput(outputId = "contents_tif")
@@ -164,14 +153,9 @@ ui <- fluidPage(
             selected = "Data Frame"
           ),
           tags$hr(),
-          # Input: Select EPSG Code
-          selectInput(
-            inputId = "epsg",
-            label = "Map with EPSG Code",
-            choices = epsg_data$code, #rgdal::make_EPSG()["code"]
-            selected = 4326
-          )
-              ),
+          # Transform EPSG Codes of CSV and TIF
+          uiOutput(outputId = "epsg_trk")
+          ),
           mainPanel = mainPanel(
             DT::dataTableOutput(outputId = "contents_trk"),
             verbatimTextOutput(outputId = "summary_trk")
@@ -272,12 +256,6 @@ output$x <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    # selectInput(
-    #   inputId = "x",
-    #   label = "x (location-long)",
-    #   choices = c("", colnames(csvInput())),
-    #   selected = NULL
-    # )
     selectizeInput(
       inputId = 'x', 
       label = "x (location-long)", 
@@ -294,12 +272,6 @@ output$y <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    # selectInput(
-    #   inputId = "y",
-    #   label = "y (location-lat)",
-    #   choices = c("", colnames(csvInput())),
-    #   selected = NULL
-    # )
     selectizeInput(
       inputId = 'y', 
       label = "y (location-lat)", 
@@ -316,12 +288,6 @@ output$ts <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    # selectInput(
-    #   inputId = "ts",
-    #   label = "ts (timestamp)",
-    #   choices = c("", colnames(csvInput())),
-    #   selected = NULL
-    # )
     selectizeInput(
       inputId = 'ts', 
       label = "ts (timestamp)", 
@@ -338,12 +304,6 @@ output$id <- renderUI({
   if (is.null(csvInput())) {
     return()
   } else {
-    # selectInput(
-    #   inputId = "id",
-    #   label = "id (individual-local-identifier)",
-    #   choices = c("", colnames(csvInput())),
-    #   selected = NULL
-    # )
     selectizeInput(
       inputId = 'id', 
       label = "id (individual-local-identifier)", 
@@ -358,10 +318,7 @@ output$id <- renderUI({
 # Display data frame or summary of data
 output$contents <- DT::renderDataTable({
   
-  if (is.null(csvInput())) {
-    return()
-  } else if (!is.null(csvInput())) {
-      
+  if (!is.null(csvInput())) {
       if (input$display == "Data Frame") {
         # Selected number of records shown per page (range to chose from dependent
         # on data set size)
@@ -406,6 +363,7 @@ observeEvent(input$dataset_tif, {
 observeEvent(input$reset_tif, {
   values_tif$upload_state <- 'reset'
 })
+
 tifInput <- reactive({
   if (is.null(values_tif$upload_state)){
     switch (input$ex_data_tif,
@@ -421,14 +379,57 @@ tifInput <- reactive({
     )
   }
 })
-# Display data frame currently not working as it has more than 2 dimensions
+# Detect EPSG Code of TIF-File via data frame "epsg_data"
+epsg_tif_detected <- reactive({
+  
+  if (!is.null(tifInput())) {
+    tifInput_prj4 <- data.frame("prj4" = raster::projection(tifInput()),
+                                stringsAsFactors = FALSE)
+    detect_epsg <- dplyr::left_join(tifInput_prj4, epsg_data, by = "prj4")
+    detect_epsg$code[1] # multiple matches possible choose the first one
+    }
+  })
+# EPSG Code TIF
+output$epsg_tif <- renderUI({
+  selectInput(
+    inputId = "epsg_tif",
+    # Add general info and for case where detection isn't possible and default 
+    # will be shown (epsg_csv)
+    label = "Detected EPSG Code", 
+    choices = na.omit(epsg_data$code),
+    selected = ifelse(!is.null(tifInput()) && !is.null(epsg_tif_detected()), 
+                      yes = epsg_tif_detected(),
+                      no = input$epsg_csv
+                      )
+)
+})
+# Transform CRS of TIF Input
+# Use "env()" for extract_covariates(env()) not tifInput)!!!!!!!!!!!!!!!!!!!!!!!
+env <- reactive({
+  if (input$epsg_tif != input$epsg_trk) {
+  raster::raster(raster::projectRaster(tifInput(), crs = sp::CRS(
+  paste("+init=epsg:", input$epsg_trk, sep = '')))
+  )
+  } else {
+    tifInput()
+  }
+})
+# ?????????
+# Assign CRS if not described yet?
+# projection(x) <- CRS(“+init=epsg:28992”)
+# ?????????
+
+
+# Display data currently not working as it has more than 2 dimensions
 # Equivalent of View(df) for shiny???
 output$contents_tif <- reactive({
   
   if (is.null(tifInput())) {
     return()
   } else {
-      tifInput()
+    #tifInput()
+    validate(need(input$epsg_trk, ''))
+    raster::projection(env())
   }
 })
 
@@ -436,9 +437,15 @@ output$contents_tif <- reactive({
 
 #### Tab: Create a Track ####
 
-# EPSG Code
-epsg_code <- reactive({
-  epsg <- switch(EXPR = input$epsg, epsg$code)
+# EPSG Code Transformation
+output$epsg_trk <- renderUI({
+  selectInput(
+    inputId = "epsg_trk",
+    # add info! (CSV and TIF will be transformed if EPSG deviates from TIF EPSG)
+    label = "Transform CRS by EPSG Code",
+    choices = na.omit(epsg_data$code),
+    selected = input$epsg_tif
+  )
 })
 
 # Create a track: choose columns
@@ -454,14 +461,18 @@ dat <- reactive({
 # Create a track
 trk <- reactive({
   if (!is.null(dat())) {
-    # dat <- csvInput()[!is.na(csvInput()[, input$x]), ] %>% # suffiecient condition??? 
-    #   select(x = input$x, y = input$y, id = input$id, ts = input$ts)
-    #return(dat)
     track <- make_track(dat(), x, y, ts, id = id,
-                        crs = CRS(paste("+init=epsg:", input$epsg, sep = ''))
+                        crs = sp::CRS(paste("+init=epsg:", input$epsg_csv, 
+                                            sep = ''))
     )
-    # Ensure CRS (coordinate reference systems match)
-    transform_coords(track, CRS(raster::projection(tifInput())))
+    # Transform CRS of track
+    if (input$epsg_csv == input$epsg_trk) {
+      return(track)
+    } else {
+    transform_coords(track, sp::CRS(paste("+init=epsg:", input$epsg_trk, 
+                                          sep = ''))
+    )
+    }
   }
 })
 
