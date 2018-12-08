@@ -45,7 +45,7 @@ ui <- fluidPage(
           actionButton('reset', 'Reset Input'),
           #actionButton('clean', 'Clean Data'),
           # Horizontal line
-          tags$hr(),
+          hr(),
           # Input: Checkbox if file has header
           checkboxInput(
             inputId = "header",
@@ -67,7 +67,7 @@ ui <- fluidPage(
             selected = '"'
           ),
           # Horizontal line
-          tags$hr(),
+          hr(),
           #Input: Select data table or summary of data set
           radioButtons(
             inputId = "display",
@@ -75,7 +75,7 @@ ui <- fluidPage(
             choices = c("Data Frame", "Summary"),
             selected = "Data Frame"
           ),
-          tags$hr(),
+          hr(),
           # Example Datasets
           selectInput(
             inputId = "ex_data_csv",
@@ -115,7 +115,7 @@ ui <- fluidPage(
           ),
           actionButton('reset_tif', 'Reset Input'),
           # Horizontal line
-          tags$hr(),
+          hr(),
           # Example Datasets
           selectInput(
             inputId = "ex_data_tif",
@@ -135,36 +135,90 @@ ui <- fluidPage(
     #### Tab: Create a Track ####
     tabPanel(
       title = "Create a Track",
-      # Sidebar layout with input and output definitions
-      sidebarLayout(
-        sidebarPanel = sidebarPanel(
-          width = 2,
-          # Create a track
+      fluidRow(
+        # Create a track
+        column(width = 4, #offset = 1,
           h4(textOutput(outputId = "track_head")),
           #h4("Create a track"),
           uiOutput(outputId = "x"),
           uiOutput(outputId = "y"),
           uiOutput(outputId = "ts"),
-          uiOutput(outputId = "id"),
-          tags$hr(),
-          # Transform EPSG Codes of CSV and TIF
+          uiOutput(outputId = "id")
+        ),
+        # Transform EPSG Codes of CSV and TIF and select ID(s)
+        br(),
+        br(),
+        column(width = 4, #offset = 1,
           uiOutput(outputId = "epsg_trk"),
-          uiOutput(outputId = "id_trk"),
-          tags$hr(),
+          br(),
+          br(),
+          uiOutput(outputId = "id_trk")#,
+          #br(),
           #Input: Select data table or summary of data set
+          # radioButtons(
+          #       inputId = "display_trk",
+          #       label = "Display",
+          #       choices = c("Data Frame", "Summary"),
+          #       selected = "Data Frame"
+          #     )
+        )
+      ),
+      hr(),
+      fluidRow(
+        #Input: Select data table or summary of data set
+        column(width = 1,
           radioButtons(
             inputId = "display_trk",
             label = "Display",
             choices = c("Data Frame", "Summary"),
             selected = "Data Frame"
-          )
-          ),
-          mainPanel = mainPanel(
-            DT::dataTableOutput(outputId = "contents_trk"),
-            verbatimTextOutput(outputId = "summary_trk")
-          )
             )
-          ),
+        ),
+        # Data table or summary
+        column(width = 6, #offset = 1,
+          DT::dataTableOutput(outputId = "contents_trk"),
+          verbatimTextOutput(outputId = "summary_trk")
+        ),
+        column(width = 4, offset = 1,
+          h4(textOutput(outputId = "samp_rate_head")),
+          DT::dataTableOutput(outputId = "summary_samp_rate")
+        )
+      )
+    ),
+    
+    #### Tab: Create a Track ####
+    # tabPanel(
+    #   title = "Create a Track",
+    #   # Sidebar layout with input and output definitions
+    #   sidebarLayout(
+    #     sidebarPanel = sidebarPanel(
+    #       width = 2,
+    #       # Create a track
+    #       h4(textOutput(outputId = "track_head")),
+    #       #h4("Create a track"),
+    #       uiOutput(outputId = "x"),
+    #       uiOutput(outputId = "y"),
+    #       uiOutput(outputId = "ts"),
+    #       uiOutput(outputId = "id"),
+    #       hr(),
+    #       # Transform EPSG Codes of CSV and TIF
+    #       uiOutput(outputId = "epsg_trk"),
+    #       uiOutput(outputId = "id_trk"),
+    #       hr(),
+    #       #Input: Select data table or summary of data set
+    #       radioButtons(
+    #       inputId = "display_trk",
+    #       label = "Display",
+    #       choices = c("Data Frame", "Summary"),
+    #       selected = "Data Frame"
+    #     )
+    #     ),
+    #     mainPanel = mainPanel(
+    #       DT::dataTableOutput(outputId = "contents_trk"),
+    #       verbatimTextOutput(outputId = "summary_trk")
+    #     )
+    #   )
+    # ),
     
     
     
@@ -246,70 +300,6 @@ csvInput <- reactive({
     )
   }
 })
-
-# Update variable selection based on uploaded data set
-# Show head line for track menu in sidebar
-output$track_head <- renderText({
-  if (!is.null(csvInput())) {
-    "Create a Track:"
-  }
-})
-# Choose x (location-long)
-output$x <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'x', 
-      label = "x (location-long)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign location-long', # 'Please select an option below'
-        onInitialize = I('function() { this.setValue(""); }')
-      )
-    )
-  }
-})
-# Choose y (location-lat)
-output$y <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'y', 
-      label = "y (location-lat)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign location-lat',
-        onInitialize = I('function() { this.setValue(""); }')
-      )
-    )
-  }
-})
-# ts (timestamp)
-output$ts <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'ts', 
-      label = "ts (timestamp)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign timestamp',
-        onInitialize = I('function() { this.setValue(""); }')
-      )
-    )
-  }
-})
-# id (individual-local-identifier)
-output$id <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'id', 
-      label = "id (individual-local-identifier)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign ID',
-        onInitialize = I('function() { this.setValue(""); }')
-      )
-    )
-  }
-})
 # Display data frame or summary of data
 output$contents <- DT::renderDataTable({
   
@@ -378,7 +368,7 @@ tifInput <- reactive({
     )
   }
 })
-# Detect EPSG Code of TIF-File via data frame "epsg_data"
+# Detect EPSG Code of TIF-File by left joining data frame "epsg_data"
 epsg_tif_detected <- reactive({
   
   if (!is.null(tifInput())) {
@@ -434,8 +424,76 @@ output$contents_tif <- reactive({
 
 #### Tab: Create a Track ####
 
+# Update variable selection based on uploaded data set
+# Show head line for track menu in sidebar
+output$track_head <- renderText({
+  if (!is.null(csvInput())) {
+    "Select Track Variables:"
+  } else {
+    "Please upload tracking data first."
+  }
+})
+# Choose x (location-long)
+output$x <- renderUI({
+  if (!is.null(csvInput())) {
+    selectizeInput(
+      inputId = 'x', 
+      label = "x (location-long)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign location-long', # 'Please select an option below'
+        onInitialize = I('function() { this.setValue(""); }')
+      )
+    )
+  }
+})
+# Choose y (location-lat)
+output$y <- renderUI({
+  if (!is.null(csvInput())) {
+    selectizeInput(
+      inputId = 'y', 
+      label = "y (location-lat)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign location-lat',
+        onInitialize = I('function() { this.setValue(""); }')
+      )
+    )
+  }
+})
+# ts (timestamp)
+output$ts <- renderUI({
+  if (!is.null(csvInput())) {
+    selectizeInput(
+      inputId = 'ts', 
+      label = "ts (timestamp)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign timestamp',
+        onInitialize = I('function() { this.setValue(""); }')
+      )
+    )
+  }
+})
+# id (individual-local-identifier)
+output$id <- renderUI({
+  if (!is.null(csvInput())) {
+    selectizeInput(
+      inputId = 'id', 
+      label = "id (individual-local-identifier)", 
+      choices = colnames(csvInput()),
+      options = list(
+        placeholder = 'Assign ID',
+        onInitialize = I('function() { this.setValue(""); }')
+      )
+    )
+  }
+})
 # EPSG Code Transformation
 output$epsg_trk <- renderUI({
+  validate(
+    need(csvInput(), '')
+  )
   selectInput(
     inputId = "epsg_trk",
     # add info! (CSV and TIF will be transformed if EPSG deviates from TIF EPSG)
@@ -457,6 +515,7 @@ output$id_trk <- renderUI({
     selected = sort(unique(dat()$id))[1:length(unique(dat()$id))]
   )
 })
+
 # Create a track: choose columns
 dat <- reactive({
   if (!is.null(csvInput()) && !is.null(tifInput())) {
@@ -468,7 +527,7 @@ dat <- reactive({
   })
 # Create a track
 trk <- reactive({
-  if (!is.null(dat())) {
+  #if (!is.null(dat())) {
     validate(
       need(input$id_trk, "Please select at least one ID.")
     )
@@ -479,6 +538,7 @@ trk <- reactive({
     )
     # Subset filtered ID(s)
     track <- track[track$id %in% input$id_trk, ]
+    
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
       track
@@ -487,9 +547,8 @@ trk <- reactive({
                                             input$epsg_trk, sep = ''))
       )
     }
-  }
+  #}
 })
-
 # Display data frame or summary of data
 output$contents_trk <- DT::renderDataTable({
   validate(
@@ -526,11 +585,51 @@ output$contents_trk <- DT::renderDataTable({
 })
 # Summary
 output$summary_trk <- renderPrint({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, ''),
+    need(input$id, '')
+  )
   if (input$display_trk == "Summary") {
     summary(object = trk())
   }
 })
 
-}
+# Summarize sampling rate
+samp_rate <- reactive({
+  validate(
+    need(input$id, '')
+  )
+  # Multiple IDs selected
+  if (length(input$id_trk) > 1) {
+    trk_multi <- group_by(trk(), id) %>% nest()
+    as.data.frame(map_df(trk_multi$data, summarize_sampling_rate))
+  } else {
+    # One ID selected
+    as.data.frame(summarize_sampling_rate(trk()))
+  }
+})
+# Show head line for sampling rate (Output)
+output$samp_rate_head <- renderText({
+  validate(
+    need(input$id_trk, '')
+  )
+  "Summary of Sampling Rate (in min):"
+})
+# Summarize sampling rate (Output)
+output$summary_samp_rate <- DT::renderDataTable({
+  validate(
+    need(input$id_trk, '')
+  )
+  # Exclude column unit (min)
+  DT::datatable(samp_rate()[, -9] %>% round(4), rownames = FALSE,
+                options = list(searching = FALSE, paging = FALSE)
+  )
+})
+
+# End server!!!
+} 
+
 #### run app ####
 shinyApp(ui = ui, server = server)
