@@ -157,7 +157,7 @@ ui <- fluidPage(
                #uiOutput(outputId = "rate_min"),
                numericInput(
                  inputId = "rate_min",
-                 label = "Resampling Rate (in min)",
+                 label = "Resampling Rate (in min):",
                  value = NA, #15,
                  min = 0,
                  step = 1
@@ -167,7 +167,7 @@ ui <- fluidPage(
                #uiOutput(outputId = "tol_min")
                numericInput(
                  inputId = "tol_min",
-                 label = "Tolerance (in min)",
+                 label = "Tolerance (in min):",
                  value = NA, #2,
                  min = 0,
                  step = 1
@@ -196,10 +196,35 @@ ui <- fluidPage(
         )
       )
     ),
-  #### Tab: Plot ####
-  tabPanel("Plot",
-   plotOutput('plot')#,
-)
+    #### Tab: Modeling ####
+    tabPanel(
+      title = "Modeling",
+      fluidRow(
+        column(width = 4, #offset = 1,
+          radioButtons(
+            inputId = "model",
+            label = h4("Choose a Model:"),
+            choices = c("Resource Selection Function", 
+                        "Step Selection Function (SSF)", 
+                        "Integrated SSF",
+                        "None"),
+            selected = "None"
+            )
+        ),
+        column(width = 4,
+               verbatimTextOutput(outputId = "contents_mod")
+        )
+      )#,
+      # fluidRow(
+      #   column(width = 4)
+      # )
+             
+    ),
+    #### Tab: Plot ####
+    tabPanel(
+      title = "Plot"#,
+     #plotOutput('plot'),
+  )
 )
 )
 
@@ -392,7 +417,7 @@ output$contents_tif <- reactive({
 # Show head line for track menu in sidebar
 output$track_head <- renderText({
   if (!is.null(csvInput())) {
-    "Select Track Variables:"
+    "Select Track Variables"
   } else {
     "Please upload tracking data first."
   }
@@ -404,7 +429,7 @@ output$x <- renderUI({
   )
   selectizeInput(
     inputId = 'x', 
-    label = "x (location-long)", 
+    label = "x (location-long):", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign location-long', # 'Please select an option below'
@@ -419,7 +444,7 @@ output$y <- renderUI({
   )
   selectizeInput(
     inputId = 'y', 
-    label = "y (location-lat)", 
+    label = "y (location-lat):", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign location-lat',
@@ -434,7 +459,7 @@ output$ts <- renderUI({
   )
   selectizeInput(
     inputId = 'ts', 
-    label = "ts (timestamp)", 
+    label = "ts (timestamp):", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign timestamp',
@@ -449,7 +474,7 @@ output$id <- renderUI({
   )
   selectizeInput(
     inputId = 'id', 
-    label = "id (individual-local-identifier)", 
+    label = "id (individual-local-identifier):", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign ID',
@@ -465,7 +490,7 @@ output$epsg_trk <- renderUI({
   selectInput(
     inputId = "epsg_trk",
     # add info! (CSV and TIF will be transformed if EPSG deviates from TIF EPSG)
-    label = "Transform CRS by EPSG Code",
+    label = "Transform CRS by EPSG Code:",
     choices = na.omit(epsg_data$code),
     selected = input$epsg_tif
   )
@@ -572,7 +597,7 @@ trk_df <- reactive({
   }
 }) 
 
-# Display data frame or summary of data
+# Display data frame of track
 output$contents_trk <- DT::renderDataTable({
   validate(
     need(input$x, 'Please assign location-long.'),
@@ -590,7 +615,7 @@ output$contents_trk <- DT::renderDataTable({
   }
 })
 
-# Summary
+# Display summary of track
 output$summary_trk <- renderPrint({
   validate(
     need(input$x, ''),
@@ -608,7 +633,7 @@ output$samp_rate_head <- renderText({
   validate(
     need(input$id_trk, '')
   )
-  "Summary of Sampling Rate (in min):"
+  "Summary of Sampling Rate (in min)"
 })
 
 # Summarize sampling rate (Output)
@@ -622,6 +647,54 @@ output$summary_samp_rate <- DT::renderDataTable({
                 options = list(searching = FALSE, paging = FALSE)
   )
 })
+
+
+
+#### Tab: Modeling ####
+set.seed(12345)
+# Fit model
+mod <- reactive({
+  validate(
+    need(input$model != 'None', 'Please choose a model.')
+  )
+  # Multiple IDs selected (individual models)
+  if (length(input$id_trk) > 1) {
+    return()
+  } else {
+    # One ID selected (single model)
+    # Fit RSF (Resource Selection Function; logistic regression)
+    if (input$model == "Resource Selection Function") {
+      rsf_one <- trk_resamp() %>% random_points() %>% extract_covariates(env())
+      # Add renamed land use column ("lu") and convert to factor
+      rsf_one[["lu"]] <- rsf_one[[names(env())]] %>% as.factor()
+      rsf_one <- rsf_one %>% fit_rsf(case_ ~ lu)
+      summary(rsf_one)
+      
+    } else if (input$model == "Step Selection Function (SSF)") {
+      # Fit SSF (Step Selection Function; conditional logistic regression)
+      ssf_one <- trk_resamp() %>% steps_by_burst() %>% random_steps() %>% 
+        extract_covariates(env())
+      # Add renamed land use column ("lu") and convert to factor
+      ssf_one[["lu"]] <- ssf_one[[names(env())]] %>% as.factor()
+      ssf_one <- ssf_one %>% fit_ssf(case_ ~ lu + strata(step_id_))
+      summary(ssf_one)
+    }
+  }
+})
+
+# Output model fit
+output$contents_mod <- renderPrint({
+  validate(
+    need(input$model != 'None', 'Please choose a model.')
+  )
+  mod()
+})
+
+
+# "Resource Selection Function", 
+# "Step Selection Function (SSF)", 
+# "Integrated SSF"
+
 
 # End server!!!
 } 
