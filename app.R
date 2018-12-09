@@ -127,8 +127,6 @@ ui <- fluidPage(
         ),
         mainPanel = mainPanel(
           verbatimTextOutput(outputId = "contents_tif")
-          #DT::dataTableOutput(outputId = "contents_tif")#,
-          #verbatimTextOutput(outputId = "summary")
         )
       )
     ),
@@ -150,17 +148,30 @@ ui <- fluidPage(
         br(),
         column(width = 4, #offset = 1,
           uiOutput(outputId = "epsg_trk"),
-          br(),
-          br(),
-          uiOutput(outputId = "id_trk")#,
           #br(),
-          #Input: Select data table or summary of data set
-          # radioButtons(
-          #       inputId = "display_trk",
-          #       label = "Display",
-          #       choices = c("Data Frame", "Summary"),
-          #       selected = "Data Frame"
-          #     )
+          #br(),
+          uiOutput(outputId = "id_trk")
+        ),
+        # Resample track
+        column(width = 4, #offset = 1,
+               #uiOutput(outputId = "rate_min"),
+               numericInput(
+                 inputId = "rate_min",
+                 label = "Resampling Rate (in min)",
+                 value = NA, #15,
+                 min = 0,
+                 step = 1
+               ),
+               #br(),
+               #br(),
+               #uiOutput(outputId = "tol_min")
+               numericInput(
+                 inputId = "tol_min",
+                 label = "Tolerance (in min)",
+                 value = NA, #2,
+                 min = 0,
+                 step = 1
+                 )
         )
       ),
       hr(),
@@ -185,43 +196,6 @@ ui <- fluidPage(
         )
       )
     ),
-    
-    #### Tab: Create a Track ####
-    # tabPanel(
-    #   title = "Create a Track",
-    #   # Sidebar layout with input and output definitions
-    #   sidebarLayout(
-    #     sidebarPanel = sidebarPanel(
-    #       width = 2,
-    #       # Create a track
-    #       h4(textOutput(outputId = "track_head")),
-    #       #h4("Create a track"),
-    #       uiOutput(outputId = "x"),
-    #       uiOutput(outputId = "y"),
-    #       uiOutput(outputId = "ts"),
-    #       uiOutput(outputId = "id"),
-    #       hr(),
-    #       # Transform EPSG Codes of CSV and TIF
-    #       uiOutput(outputId = "epsg_trk"),
-    #       uiOutput(outputId = "id_trk"),
-    #       hr(),
-    #       #Input: Select data table or summary of data set
-    #       radioButtons(
-    #       inputId = "display_trk",
-    #       label = "Display",
-    #       choices = c("Data Frame", "Summary"),
-    #       selected = "Data Frame"
-    #     )
-    #     ),
-    #     mainPanel = mainPanel(
-    #       DT::dataTableOutput(outputId = "contents_trk"),
-    #       verbatimTextOutput(outputId = "summary_trk")
-    #     )
-    #   )
-    # ),
-    
-    
-    
   #### Tab: Plot ####
   tabPanel("Plot",
    plotOutput('plot')#,
@@ -302,37 +276,21 @@ csvInput <- reactive({
 })
 # Display data frame or summary of data
 output$contents <- DT::renderDataTable({
-  
+  # validate(
+  #   need(csvInput(), '') # displays summary below table area when selected
+  # )
   if (!is.null(csvInput())) {
-      if (input$display == "Data Frame") {
-        # Selected number of records shown per page (range to chose from dependent
-        # on data set size)
-        # Alternative not dependent on data set size: 
-        # list(c(5, 15, 50, -1), c('5', '15', '50', 'All'))
-        page_length <-  if (nrow(csvInput()) > 100){
-          c(5, 10, 15, 20, 50, 100, nrow(csvInput()))
-        } else if (nrow(csvInput()) <= 5) {
-          nrow(csvInput())
-        } else if (nrow(csvInput()) <= 10) {
-          c(5, nrow(csvInput()))
-        } else if (nrow(csvInput()) <= 15) {
-          c(5, 10, nrow(csvInput()))
-        } else if (nrow(csvInput()) <= 20) {
-          c(5, 10, 15, nrow(csvInput()))
-        } else if (nrow(csvInput()) <= 50) {
-          c(5, 10, 15, 20, nrow(csvInput()))
-        } else if (nrow(csvInput()) <= 100) {
-          c(5, 10, 15, 20, 50, nrow(csvInput()))
-        }
-        DT::datatable(csvInput(), 
-                      rownames = FALSE,
-                      options = list(
-                        lengthMenu = page_length,
-                        pageLength = 5
-                      )
-        )
-      }
-  } 
+    if (input$display == "Data Frame") {
+      DT::datatable(csvInput(), 
+                    rownames = FALSE,
+                    options = list(
+                      lengthMenu = list(c(5, 10, 20, 50, 100), 
+                                        c('5', '10', '20', '50', '100')),
+                      pageLength = 5
+                    )
+      )
+    }
+  }
 })
 # Summary
 output$summary <- renderPrint({
@@ -370,13 +328,13 @@ tifInput <- reactive({
 })
 # Detect EPSG Code of TIF-File by left joining data frame "epsg_data"
 epsg_tif_detected <- reactive({
-  
-  if (!is.null(tifInput())) {
-    tifInput_prj4 <- data.frame("prj4" = raster::projection(tifInput()),
-                                stringsAsFactors = FALSE)
-    detect_epsg <- dplyr::left_join(tifInput_prj4, epsg_data, by = "prj4")
-    detect_epsg$code[1] # multiple matches possible choose the first one
-    }
+  validate(
+    need(tifInput(), '')
+  )
+  tifInput_prj4 <- data.frame("prj4" = raster::projection(tifInput()),
+                              stringsAsFactors = FALSE)
+  detect_epsg <- dplyr::left_join(tifInput_prj4, epsg_data, by = "prj4")
+  detect_epsg$code[1] # multiple matches possible choose the first one
   })
 # EPSG Code TIF
 output$epsg_tif <- renderUI({
@@ -396,28 +354,34 @@ output$epsg_tif <- renderUI({
 # Use "env()" for extract_covariates(env()) not tifInput)!!!!!!!!!!!!!!!!!!!!!!!
 env <- reactive({
   if (input$epsg_tif != input$epsg_trk) {
-  raster::raster(raster::projectRaster(tifInput(), crs = sp::CRS(
-  paste("+init=epsg:", input$epsg_trk, sep = '')))
-  )
+    # ????????????????????????????????????????????????
+    # Large Raster Layer introduces quite a few NAs
+    # Use 'to' argument and projectExtent(object, crs) as template? 
+    raster::projectRaster(tifInput(),
+                          crs = sp::CRS(paste("+init=epsg:", 
+                                              input$epsg_trk, sep = '')),
+                          res = res(tifInput()), # keep resolution
+                          # categorial vairiables (nearest neighbor)
+                          method="ngb" #"bilinear",
+    )
   } else {
     tifInput()
   }
 })
 # ?????????
 # Assign CRS if not described yet?
-# projection(x) <- CRS(“+init=epsg:28992”)
+# projection(x) <- CRS("+init=epsg:28992")
 # ?????????
 
 
 # Display data currently not working as it has more than 2 dimensions
 # Equivalent of View(df) for shiny???
 output$contents_tif <- reactive({
-  
-  if (!is.null(tifInput())) {
-    #tifInput()
-    validate(need(input$epsg_trk, ''))
-    raster::projection(env())
-  }
+  validate(
+    need(tifInput(), ''),
+    need(input$epsg_trk, '')
+  )
+  raster::projection(env())
 })
 
 
@@ -435,59 +399,63 @@ output$track_head <- renderText({
 })
 # Choose x (location-long)
 output$x <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'x', 
-      label = "x (location-long)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign location-long', # 'Please select an option below'
-        onInitialize = I('function() { this.setValue(""); }')
-      )
+  validate(
+    need(csvInput(), '')
+  )
+  selectizeInput(
+    inputId = 'x', 
+    label = "x (location-long)", 
+    choices = colnames(csvInput()),
+    options = list(
+      placeholder = 'Assign location-long', # 'Please select an option below'
+      onInitialize = I('function() { this.setValue(""); }')
     )
-  }
+  )
 })
 # Choose y (location-lat)
 output$y <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'y', 
-      label = "y (location-lat)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign location-lat',
-        onInitialize = I('function() { this.setValue(""); }')
-      )
+  validate(
+    need(csvInput(), '')
+  )
+  selectizeInput(
+    inputId = 'y', 
+    label = "y (location-lat)", 
+    choices = colnames(csvInput()),
+    options = list(
+      placeholder = 'Assign location-lat',
+      onInitialize = I('function() { this.setValue(""); }')
     )
-  }
+  )
 })
 # ts (timestamp)
 output$ts <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'ts', 
-      label = "ts (timestamp)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign timestamp',
-        onInitialize = I('function() { this.setValue(""); }')
-      )
+  validate(
+    need(csvInput(), '')
+  )
+  selectizeInput(
+    inputId = 'ts', 
+    label = "ts (timestamp)", 
+    choices = colnames(csvInput()),
+    options = list(
+      placeholder = 'Assign timestamp',
+      onInitialize = I('function() { this.setValue(""); }')
     )
-  }
+  )
 })
 # id (individual-local-identifier)
 output$id <- renderUI({
-  if (!is.null(csvInput())) {
-    selectizeInput(
-      inputId = 'id', 
-      label = "id (individual-local-identifier)", 
-      choices = colnames(csvInput()),
-      options = list(
-        placeholder = 'Assign ID',
-        onInitialize = I('function() { this.setValue(""); }')
-      )
+  validate(
+    need(csvInput(), '')
+  )
+  selectizeInput(
+    inputId = 'id', 
+    label = "id (individual-local-identifier)", 
+    choices = colnames(csvInput()),
+    options = list(
+      placeholder = 'Assign ID',
+      onInitialize = I('function() { this.setValue(""); }')
     )
-  }
+  )
 })
 # EPSG Code Transformation
 output$epsg_trk <- renderUI({
@@ -518,16 +486,17 @@ output$id_trk <- renderUI({
 
 # Create a track: choose columns
 dat <- reactive({
-  if (!is.null(csvInput()) && !is.null(tifInput())) {
-    # Geometrically subset raster and omit NAs in subset
-      csvInput() %>% 
-      select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
-      na.omit()
-  }
-  })
+  validate(
+    need(csvInput(), '')
+  )
+  # Geometrically subset raster and omit NAs in subset
+  csvInput() %>% 
+  select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
+  na.omit()
+})
+
 # Create a track
 trk <- reactive({
-  #if (!is.null(dat())) {
     validate(
       need(input$id_trk, "Please select at least one ID.")
     )
@@ -547,8 +516,62 @@ trk <- reactive({
                                             input$epsg_trk, sep = ''))
       )
     }
-  #}
 })
+
+# Summarize sampling rate
+samp_rate <- reactive({
+  validate(
+    need(input$id_trk, '')
+  )
+  # Multiple IDs selected
+  if (length(input$id_trk) > 1) {
+    trk_multi <- group_by(trk(), id) %>% nest()
+    map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
+  } else {
+    # One ID selected
+    summarize_sampling_rate(trk()) %>% as.data.frame()
+  }
+})
+
+# Resample track (this will be used for model building not trk_df)!!!!!!!!!!!!!!
+trk_resamp <- reactive({
+  validate(
+    need(input$rate_min, ''),
+    need(input$tol_min, '')
+  )
+  # Multiple IDs selected
+  if (length(input$id_trk) > 1) {
+    group_by(trk(), id) %>% nest() %>% 
+      mutate(data = map(data, ~ .x %>% 
+                          track_resample(rate = minutes(input$rate_min),
+                                         tolerance = minutes(input$tol_min))))
+  } else {
+    # One ID selected
+    trk() %>% track_resample(rate = minutes(input$rate_min), 
+                             tolerance = minutes(input$tol_min))
+  }
+})
+
+# Track table displayed in app (dependent on resampling)
+trk_df <- reactive({
+  # Before resampling
+  if (is.na(input$rate_min) && is.na(input$tol_min)) {
+    trk()
+  } else {
+    # Resampled track  
+    # Multiple IDs selected
+    if (length(input$id_trk) > 1) {
+      # Convert back to data frame for illustration
+      trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
+      # Swap columns
+      trk_resamp_unnested_df[, c("x_", "y_", "t_", "id", "burst_")]
+    } else {
+      # One ID selected
+      trk_resamp()
+    }
+  }
+}) 
+
 # Display data frame or summary of data
 output$contents_trk <- DT::renderDataTable({
   validate(
@@ -558,31 +581,15 @@ output$contents_trk <- DT::renderDataTable({
     need(input$id, 'Please assign ID.')
   )
   if (input$display_trk == "Data Frame") {
-    # Selected number of records shown per page (range to chose from dependent
-    # on data set size)
-    # Alternative not dependent on data set size: 
-    # list(c(5, 15, 50, -1), c('5', '15', '50', 'All'))
-    page_length <-  if (nrow(trk()) > 100){
-      c(10, 15, 20, 50, 100, nrow(trk()))
-    } else if (nrow(trk()) <= 10) {
-      nrow(trk())
-    } else if (nrow(trk()) <= 15) {
-      c(10, nrow(trk()))
-    } else if (nrow(trk()) <= 20) {
-      c(10, 15, nrow(trk()))
-    } else if (nrow(trk()) <= 50) {
-      c(10, 15, 20, nrow(trk()))
-    } else if (nrow(trk()) <= 100) {
-      c(10, 15, 20, 50, nrow(trk()))
-    }
-    DT::datatable(trk(), rownames = FALSE,
+    DT::datatable(trk_df(),
+                  rownames = FALSE,
                   options = list(
-                    lengthMenu = page_length,
-                    pageLength = 10
-                  )
-    )
+                    lengthMenu = list(c(5, 10, 20, 50, 100),
+                                      c('5', '10', '20', '50', '100')),
+                    pageLength = 10))
   }
 })
+
 # Summary
 output$summary_trk <- renderPrint({
   validate(
@@ -592,24 +599,10 @@ output$summary_trk <- renderPrint({
     need(input$id, '')
   )
   if (input$display_trk == "Summary") {
-    summary(object = trk())
+    summary(object = trk_df())
   }
 })
 
-# Summarize sampling rate
-samp_rate <- reactive({
-  validate(
-    need(input$id, '')
-  )
-  # Multiple IDs selected
-  if (length(input$id_trk) > 1) {
-    trk_multi <- group_by(trk(), id) %>% nest()
-    as.data.frame(map_df(trk_multi$data, summarize_sampling_rate))
-  } else {
-    # One ID selected
-    as.data.frame(summarize_sampling_rate(trk()))
-  }
-})
 # Show head line for sampling rate (Output)
 output$samp_rate_head <- renderText({
   validate(
@@ -617,13 +610,15 @@ output$samp_rate_head <- renderText({
   )
   "Summary of Sampling Rate (in min):"
 })
+
 # Summarize sampling rate (Output)
 output$summary_samp_rate <- DT::renderDataTable({
   validate(
     need(input$id_trk, '')
   )
-  # Exclude column unit (min)
-  DT::datatable(samp_rate()[, -9] %>% round(4), rownames = FALSE,
+  # Exclude column "unit" (min)
+  DT::datatable(samp_rate()[, -9] %>% round(2),
+                rownames = FALSE,
                 options = list(searching = FALSE, paging = FALSE)
   )
 })
