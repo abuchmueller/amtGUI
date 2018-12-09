@@ -673,7 +673,7 @@ mod <- reactive({
       
     } else if (input$model == "Step Selection Function (SSF)") {
       # Fit SSF (Step Selection Function; conditional logistic regression)
-      #set.seed(12345)
+      set.seed(12345)
       ssf_one <- trk_resamp() %>% steps_by_burst() %>% random_steps() %>% 
         extract_covariates(env())
       # Add renamed land use column ("lu") and convert to factor
