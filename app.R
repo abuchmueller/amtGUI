@@ -246,8 +246,8 @@ tabItem(tabName = "model",
              selected = "None"
            )
     ),
-    box(column(width = 6,
-           verbatimTextOutput(outputId = "contents_mod"))
+    box(width = 6,
+           verbatimTextOutput(outputId = "contents_mod")
     )
   )#,
   # fluidRow(
