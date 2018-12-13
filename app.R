@@ -1,4 +1,5 @@
 library(shiny)
+library(shinydashboard)
 library(ggplot2)
 library(tidyverse)
 library(amt)
@@ -21,218 +22,255 @@ epsg_data <- rgdal::make_EPSG()
 #grid::grid.raster(img)
 
 
-#### UI ####
-ui <- fluidPage(
+
+# UI ----------------------------------------------------------------------
+
+
+# Header --------------------------------------------------------
+
+ui <- dashboardPage(skin = "green",
   
-  titlePanel(h3("Habitat Selection Analyses")),
-  
-  tabsetPanel(
-    #### Tab: Data upload ####
-    tabPanel(
-      title = "Tracking Data Upload",
-      # Sidebar layout with input and output definitions
-      sidebarLayout(
-        sidebarPanel = sidebarPanel(
-          width = 2,
-          # Input: Select a file
-          fileInput(
-            inputId = "dataset_csv",
-            label = "Choose CSV File",
-            multiple = TRUE,
-            accept = c("text/csv",
-                       "text/comma-separated-values,text/plain", ".csv")
-          ),
-          actionButton('reset', 'Reset Input'),
-          #actionButton('clean', 'Clean Data'),
-          # Horizontal line
-          hr(),
-          # Input: Checkbox if file has header
-          checkboxInput(
-            inputId = "header",
-            label = "Header",
-            value = TRUE
-          ),
-          # Input: Select separator
-          radioButtons(
-            inputId = "sep",
-            label = "Separator",
-            choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
-            selected = ","
-          ),
-          # Input: Select quotes
-          radioButtons(
-            inputId = "quote",
-            label = "Quote",
-            choices = c(None = "", "Double Quote" = '"', "Single Quote" = "'"),
-            selected = '"'
-          ),
-          # Horizontal line
-          hr(),
-          #Input: Select data table or summary of data set
-          radioButtons(
-            inputId = "display",
-            label = "Display",
-            choices = c("Data Frame", "Summary"),
-            selected = "Data Frame"
-          ),
-          hr(),
-          # Example Datasets
-          selectInput(
-            inputId = "ex_data_csv",
-            label = "Choose Example Data:",
-            choices = c("None", "Fisher NY"#, 
-                        #"Fisher ID 1016", "Fisher ID 1016 Day", 
-                        #"Fisher ID 1016 Night"
-                        )
-          ),
-          # Input: Select EPSG Code
-          selectInput(
-            inputId = "epsg_csv",
-            label = "Assign EPSG Code",
-            choices = na.omit(epsg_data$code), #rgdal::make_EPSG()["code"]
-            selected = 4326
+  dashboardHeader(title = "amtGUI"),
+
+# Sidebar -----------------------------------------------------------------
+
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Data Upload", tabName = "data", icon = icon("file-upload")),
+      menuItem("Upload Map", tabName = "map", icon = icon("upload")),
+      menuItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
+      menuItem("Modeling", tabName = "model", icon = icon("database")),
+      menuItem("Visualize", tabName = "plot", icon = icon("chart-area"))
+    )),
+
+# Body ----------------------------------------------------------
+
+  dashboardBody(
+    tabItems(
+
+# Data Upload Tab ---------------------------------------------------------
+
+      tabItem(tabName = "data",
+        fluidRow(
+          title = "Tracking Data Upload",
+          # Sidebar layout with input and output definitions
+          sidebarLayout(
+            sidebarPanel = sidebarPanel(
+              width = 2,
+              # Input: Select a file
+              fileInput(
+                inputId = "dataset_csv",
+                label = "Choose CSV File",
+                multiple = TRUE,
+                accept = c("text/csv",
+                           "text/comma-separated-values,text/plain", ".csv")
+              ),
+              actionButton('reset', 'Reset Input'),
+              #actionButton('clean', 'Clean Data'),
+              # Horizontal line
+              hr(),
+              # Input: Checkbox if file has header
+              checkboxInput(
+                inputId = "header",
+                label = "Header",
+                value = TRUE
+              ),
+              # Input: Select separator
+              radioButtons(
+                inputId = "sep",
+                label = "Separator",
+                choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
+                selected = ","
+              ),
+              # Input: Select quotes
+              radioButtons(
+                inputId = "quote",
+                label = "Quote",
+                choices = c(None = "", "Double Quote" = '"', "Single Quote" = "'"),
+                selected = '"'
+              ),
+              # Horizontal line
+              hr(),
+              #Input: Select data table or summary of data set
+              radioButtons(
+                inputId = "display",
+                label = "Display",
+                choices = c("Data Frame", "Summary"),
+                selected = "Data Frame"
+              ),
+              hr(),
+              # Example Datasets
+              selectInput(
+                inputId = "ex_data_csv",
+                label = "Choose Example Data:",
+                choices = c("None", "Fisher NY"#, 
+                            #"Fisher ID 1016", "Fisher ID 1016 Day", 
+                            #"Fisher ID 1016 Night"
+                )
+              ),
+              # Input: Select EPSG Code
+              selectInput(
+                inputId = "epsg_csv",
+                label = "Assign EPSG Code",
+                choices = na.omit(epsg_data$code), #rgdal::make_EPSG()["code"]
+                selected = 4326
+              )
+            ),
+            mainPanel = mainPanel(
+              DT::dataTableOutput(outputId = "contents"),
+              verbatimTextOutput(outputId = "summary")
+            )
           )
-        ),
-        mainPanel = mainPanel(
-          DT::dataTableOutput(outputId = "contents"),
-          verbatimTextOutput(outputId = "summary")
         )
-      )
-    ),
-    #### Tab: Environmental Data upload ####
-    tabPanel(
-      title = "Environmental Data Upload",
-      # Sidebar layout with input and output definitions
-      sidebarLayout(
-        sidebarPanel = sidebarPanel(
-          width = 2,
-          # Input: Select a file
-          fileInput(
-            inputId = "dataset_tif",
-            label = "Choose TIF File"#,
-            #multiple = TRUE#,
-            #accept = c("tif", ".tif")
-          ),
-          actionButton('reset_tif', 'Reset Input'),
-          # Horizontal line
-          hr(),
-          # Example Datasets
-          selectInput(
-            inputId = "ex_data_tif",
-            label = "Choose Example Data:",
-            choices = c("None", "Fisher NY Land Use Area")
-          ),
-          # EPSG Code TIF
-          uiOutput(outputId = "epsg_tif")
-        ),
-        mainPanel = mainPanel(
-          verbatimTextOutput(outputId = "contents_tif")
-        )
-      )
-    ),
-    #### Tab: Create a Track ####
-    tabPanel(
-      title = "Create a Track",
-      fluidRow(
-        # Create a track
-        column(width = 4, #offset = 1,
-          h4(textOutput(outputId = "track_head")),
-          #h4("Create a track"),
-          uiOutput(outputId = "x"),
-          uiOutput(outputId = "y"),
-          uiOutput(outputId = "ts"),
-          uiOutput(outputId = "id")
-        ),
-        # Transform EPSG Codes of CSV and TIF and select ID(s)
-        br(),
-        br(),
-        column(width = 4, #offset = 1,
-          uiOutput(outputId = "epsg_trk"),
-          #br(),
-          #br(),
-          uiOutput(outputId = "id_trk")
-        ),
-        # Resample track
-        column(width = 4, #offset = 1,
-               #uiOutput(outputId = "rate_min"),
-               numericInput(
-                 inputId = "rate_min",
-                 label = "Resampling Rate (in min):",
-                 value = NA, #15,
-                 min = 0,
-                 step = 1
-               ),
-               #br(),
-               #br(),
-               #uiOutput(outputId = "tol_min")
-               numericInput(
-                 inputId = "tol_min",
-                 label = "Tolerance (in min):",
-                 value = NA, #2,
-                 min = 0,
-                 step = 1
-                 )
-        )
+        
       ),
-      hr(),
-      fluidRow(
-        #Input: Select data table or summary of data set
-        column(width = 1,
-          radioButtons(
-            inputId = "display_trk",
-            label = "Display",
-            choices = c("Data Frame", "Summary"),
-            selected = "Data Frame"
-            )
-        ),
-        # Data table or summary
-        column(width = 6, #offset = 1,
-          DT::dataTableOutput(outputId = "contents_trk"),
-          verbatimTextOutput(outputId = "summary_trk")
-        ),
-        column(width = 4, offset = 1,
-          h4(textOutput(outputId = "samp_rate_head")),
-          DT::dataTableOutput(outputId = "summary_samp_rate")
-        )
-      )
+
+# Upload Map Tab ----------------------------------------------------------
+
+      tabItem(tabName = "map",
+              fluidRow(
+                  title = "Environmental Data Upload",
+                  # Sidebar layout with input and output definitions
+                  sidebarLayout(
+                    sidebarPanel = sidebarPanel(
+                      width = 2,
+                      # Input: Select a file
+                      fileInput(
+                        inputId = "dataset_tif",
+                        label = "Choose TIF File"#,
+                        #multiple = TRUE#,
+                        #accept = c("tif", ".tif")
+                      ),
+                      actionButton('reset_tif', 'Reset Input'),
+                      # Horizontal line
+                      hr(),
+                      # Example Datasets
+                      selectInput(
+                        inputId = "ex_data_tif",
+                        label = "Choose Example Data:",
+                        choices = c("None", "Fisher NY Land Use Area")
+                      ),
+                      # EPSG Code TIF
+                      uiOutput(outputId = "epsg_tif")
+                    ),
+                    mainPanel = mainPanel(
+                      verbatimTextOutput(outputId = "contents_tif")
+                    )
+                  )
+              )),
+
+# Track Creation Tab ------------------------------------------------------
+
+tabItem(tabName = "track",
+  fluidRow(
+    # Create a track
+    column(width = 4, #offset = 1,
+           h4(textOutput(outputId = "track_head")),
+           #h4("Create a track"),
+           uiOutput(outputId = "x"),
+           uiOutput(outputId = "y"),
+           uiOutput(outputId = "ts"),
+           uiOutput(outputId = "id")
     ),
-    #### Tab: Modeling ####
-    tabPanel(
-      title = "Modeling",
-      fluidRow(
-        column(width = 4, #offset = 1,
-          radioButtons(
-            inputId = "model",
-            label = h4("Choose a Model:"),
-            choices = c("Resource Selection Function", 
-                        "Step Selection Function (SSF)", 
-                        "Integrated SSF",
-                        "None"),
-            selected = "None"
-            )
-        ),
-        column(width = 4,
-               verbatimTextOutput(outputId = "contents_mod")
-        )
-      )#,
-      # fluidRow(
-      #   column(width = 4)
-      # )
-             
+    # Transform EPSG Codes of CSV and TIF and select ID(s)
+    br(),
+    br(),
+    column(width = 4, #offset = 1,
+           uiOutput(outputId = "epsg_trk"),
+           #br(),
+           #br(),
+           uiOutput(outputId = "id_trk")
     ),
-    #### Tab: Plot ####
-    tabPanel(
-      title = "Plot"#,
-     #plotOutput('plot'),
+    # Resample track
+    column(width = 4, #offset = 1,
+           #uiOutput(outputId = "rate_min"),
+           numericInput(
+             inputId = "rate_min",
+             label = "Resampling Rate (in min):",
+             value = NA, #15,
+             min = 0,
+             step = 1
+           ),
+           #br(),
+           #br(),
+           #uiOutput(outputId = "tol_min")
+           numericInput(
+             inputId = "tol_min",
+             label = "Tolerance (in min):",
+             value = NA, #2,
+             min = 0,
+             step = 1
+           )
+    )
+  ),
+  hr(),
+  fluidRow(
+    #Input: Select data table or summary of data set
+    column(width = 1,
+           radioButtons(
+             inputId = "display_trk",
+             label = "Display",
+             choices = c("Data Frame", "Summary"),
+             selected = "Data Frame"
+           )
+    ),
+    # Data table or summary
+    column(width = 6, #offset = 1,
+           DT::dataTableOutput(outputId = "contents_trk"),
+           verbatimTextOutput(outputId = "summary_trk")
+    ),
+    column(width = 4, offset = 1,
+           h4(textOutput(outputId = "samp_rate_head")),
+           DT::dataTableOutput(outputId = "summary_samp_rate")
+    )
   )
+),
+
+# Visualize Tab -----------------------------------------------------------
+
+tabItem(tabName = "plot",
+        h2("Magic by Olli")),
+
+# Modeling Tab -------------------------------------------------------------------
+
+tabItem(tabName = "model",
+  fluidRow(
+    column(width = 4, #offset = 1,
+           radioButtons(
+             inputId = "model",
+             label = h4("Choose a Model:"),
+             choices = c("Resource Selection Function", 
+                         "Step Selection Function (SSF)", 
+                         "Integrated SSF",
+                         "None"),
+             selected = "None"
+           )
+    ),
+    box(column(width = 6,
+           verbatimTextOutput(outputId = "contents_mod"))
+    )
+  )#,
+  # fluidRow(
+  #   column(width = 4)
+  # )
+  
 )
-)
+      
+    )
+  )
+    
+  )
 
 
-#### server ####
+# Server ------------------------------------------------------------------
+
+
 server <- function(input, output, session) {
   
-#### Tab: Data upload ####
+
+# Data Upload -------------------------------------------------------------
+
+
 # input$dataset will be NULL initially. After the user selects
 # and uploads a file, head of that data file by default,
 # or summary if selected, will be shown.
@@ -326,7 +364,10 @@ output$summary <- renderPrint({
 
 
 
-#### Environmental Data Upload ####
+
+# Map Upload --------------------------------------------------------------
+
+
 values_tif <- reactiveValues(upload_state = NULL)
 
 observeEvent(input$dataset_tif, {
@@ -411,7 +452,9 @@ output$contents_tif <- reactive({
 
 
 
-#### Tab: Create a Track ####
+
+# Track Creation ----------------------------------------------------------
+
 
 # Update variable selection based on uploaded data set
 # Show head line for track menu in sidebar
@@ -650,7 +693,9 @@ output$summary_samp_rate <- DT::renderDataTable({
 
 
 
-#### Tab: Modeling ####
+
+# Modeling ----------------------------------------------------------------
+
 
 # Fit model
 mod <- reactive({
@@ -700,5 +745,7 @@ output$contents_mod <- renderPrint({
 # End server!!!
 } 
 
-#### run app ####
+
+# Run App -----------------------------------------------------------------
+
 shinyApp(ui = ui, server = server)
