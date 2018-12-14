@@ -8,10 +8,16 @@ library(amt)
 # Example data
 # Tracking / relocation data
 fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
+# Subset relevant columns
+fisher_ny <- fisher_ny[, c("location-long", "location-lat", "timestamp", 
+                           "individual-local-identifier")]
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
+
 # Environmental data
 land_use_fisher_ny <- raster::raster("data/landuse_study_area.tif")
+# Rename TIF for usage in model building
+names(land_use_fisher_ny) <- "land_use"
 
 # EPSG Codes
 epsg_data <- rgdal::make_EPSG()
@@ -238,7 +244,7 @@ tabItem(tabName = "model",
     )
   ),
   br(), # break
-  hr(), # horizonatl line not showing for some reason???
+  hr(), # horizontal line not showing for some reason???
   fluidRow(
     column(width = 5,
         verbatimTextOutput(outputId = "contents_mod"),
@@ -332,7 +338,7 @@ output$contents <- DT::renderDataTable({
                     options = list(
                       lengthMenu = list(c(5, 10, 20, 50, 100), 
                                         c('5', '10', '20', '50', '100')),
-                      pageLength = 5
+                      pageLength = 10
                     )
       )
     }
@@ -367,7 +373,7 @@ tifInput <- reactive({
             "None" = return()
     )
   } else if (values_tif$upload_state == 'uploaded') {
-    raster::raster(x = input$dataset_tif$datapath)
+    names(raster::raster(x = input$dataset_tif$datapath)) <- "land_use"
   } else if (values_tif$upload_state == 'reset') {
     switch (input$ex_data_tif,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
@@ -695,9 +701,7 @@ mod <- reactive({
         m1 = map(data, ~ .x %>% random_points() %>% 
                    extract_covariates(env()) %>%
                    # Add renamed land use column ("lu") and convert to factor,
-                   # access covariates by TIF name stored in rater object (env),
-                   # parse to convert the string into an expression
-                   mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+                   mutate(lu = factor(land_use)) %>% 
                    fit_rsf(case_ ~ lu)))
       # Plot: look at coefficients
       rsf_multi %>% mutate(m1_sum = map(m1, ~ broom::tidy(.$model))) %>% 
@@ -714,8 +718,8 @@ mod <- reactive({
         mutate(
           m2 = map(steps, ~ .x %>% random_steps %>% 
                      extract_covariates(env()) %>%
-                     # Add renamed land use column ("lu") and convert to factor
-                     mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+                     # Add renamed land use column ("lu") and convert to factor 
+                     mutate(lu = factor(land_use)) %>%
                      fit_ssf(case_ ~ lu + strata(step_id_))))
       
       # look at coefficients
@@ -735,8 +739,8 @@ mod <- reactive({
       set.seed(12345)
       rsf_one <- trk_resamp() %>% random_points() %>% 
         extract_covariates(env()) %>%
-        # Add renamed land use column ("lu") and convert to factor
-        mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+        # Add renamed land use column ("lu") and convert to factor 
+        mutate(lu = factor(land_use)) %>%
         fit_rsf(case_ ~ lu)
       summary(rsf_one)
       
@@ -745,8 +749,8 @@ mod <- reactive({
       set.seed(12345)
       ssf_one <- trk_resamp() %>% steps_by_burst() %>% random_steps() %>% 
         extract_covariates(env()) %>% 
-        # Add renamed land use column ("lu") and convert to factor
-        mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+        # Add renamed land use column ("lu") and convert to factor 
+        mutate(lu = factor(land_use)) %>%
         fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
     } else if (input$model == "Integrated SSF") {
