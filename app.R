@@ -5,9 +5,6 @@ library(amt)
 
 
 # Example data
-#fisher_id_1016 <- read_csv("data/fisher_1016.csv")
-#fisher_id_1016_day <- read_csv("data/fisher_1016_day.csv")
-#fisher_id_1016_night <- read_csv("data/fisher_1016_night.csv")
 fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
@@ -15,11 +12,6 @@ land_use_fisher_ny <- raster::raster("data/landuse_study_area.tif")
 
 # EPSG Codes
 epsg_data <- rgdal::make_EPSG()
-
-# Plot a tif
-#img <- tiff::readTIFF("data/landuse_study_area.tif")
-#grid::grid.raster(img)
-
 
 #### UI ####
 ui <- fluidPage(
@@ -43,7 +35,6 @@ ui <- fluidPage(
                        "text/comma-separated-values,text/plain", ".csv")
           ),
           actionButton('reset', 'Reset Input'),
-          #actionButton('clean', 'Clean Data'),
           # Horizontal line
           hr(),
           # Input: Checkbox if file has header
@@ -258,9 +249,6 @@ csvInput <- reactive({
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
-            #"Fisher ID 1016" = fisher_id_1016,
-            #"Fisher ID 1016 Day" = fisher_id_1016_day,
-            #"Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
@@ -288,16 +276,10 @@ csvInput <- reactive({
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
     }
-    # csv_uploaded <- read.csv(file = input$dataset_csv$datapath, 
-    #                          header = input$header, sep = input$sep, 
-    #                          quote = input$quote) 
     return(csv_uploaded)
   } else if (values_csv$upload_state == 'reset') {
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
-            #"Fisher ID 1016" = fisher_id_1016,
-            #"Fisher ID 1016 Day" = fisher_id_1016_day,
-            #"Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   }
@@ -681,7 +663,7 @@ mod <- reactive({
       # Fit SSF (Step Selection Function; conditional logistic regression)
       ssf_multi <- trk_resamp() %>% 
         mutate(steps = map(data, steps_by_burst)) %>% 
-        filter(map_int(steps, nrow) > 100) %>% 
+        filter(map_int(steps, nrow) > 100) %>% # 100 as option (any number)???
         mutate(
           m2 = map(steps, ~ .x %>% random_steps %>% 
                      extract_covariates(env()) %>% 
