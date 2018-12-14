@@ -6,20 +6,15 @@ library(amt)
 
 
 # Example data
-#fisher_id_1016 <- read_csv("data/fisher_1016.csv")
-#fisher_id_1016_day <- read_csv("data/fisher_1016_day.csv")
-#fisher_id_1016_night <- read_csv("data/fisher_1016_night.csv")
+# Tracking / relocation data
 fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
+# Environmental data
 land_use_fisher_ny <- raster::raster("data/landuse_study_area.tif")
 
 # EPSG Codes
 epsg_data <- rgdal::make_EPSG()
-
-# Plot a tif
-#img <- tiff::readTIFF("data/landuse_study_area.tif")
-#grid::grid.raster(img)
 
 
 
@@ -66,7 +61,6 @@ ui <- dashboardPage(skin = "green",
                            "text/comma-separated-values,text/plain", ".csv")
               ),
               actionButton('reset', 'Reset Input'),
-              #actionButton('clean', 'Clean Data'),
               # Horizontal line
               hr(),
               # Input: Checkbox if file has header
@@ -86,7 +80,8 @@ ui <- dashboardPage(skin = "green",
               radioButtons(
                 inputId = "quote",
                 label = "Quote",
-                choices = c(None = "", "Double Quote" = '"', "Single Quote" = "'"),
+                choices = c(None = "", "Double Quote" = '"', 
+                            "Single Quote" = "'"),
                 selected = '"'
               ),
               # Horizontal line
@@ -103,10 +98,7 @@ ui <- dashboardPage(skin = "green",
               selectInput(
                 inputId = "ex_data_csv",
                 label = "Choose Example Data:",
-                choices = c("None", "Fisher NY"#, 
-                            #"Fisher ID 1016", "Fisher ID 1016 Day", 
-                            #"Fisher ID 1016 Night"
-                )
+                choices = c("None", "Fisher NY")
               ),
               # Input: Select EPSG Code
               selectInput(
@@ -138,7 +130,6 @@ ui <- dashboardPage(skin = "green",
                       fileInput(
                         inputId = "dataset_tif",
                         label = "Choose TIF File"#,
-                        #multiple = TRUE#,
                         #accept = c("tif", ".tif")
                       ),
                       actionButton('reset_tif', 'Reset Input'),
@@ -193,7 +184,6 @@ tabItem(tabName = "track",
            ),
            #br(),
            #br(),
-           #uiOutput(outputId = "tol_min")
            numericInput(
              inputId = "tol_min",
              label = "Tolerance (in min):",
@@ -215,7 +205,7 @@ tabItem(tabName = "track",
            )
     ),
     # Data table or summary
-    column(width = 6, #offset = 1,
+    column(width = 5, #offset = 1,
            DT::dataTableOutput(outputId = "contents_trk"),
            verbatimTextOutput(outputId = "summary_trk")
     ),
@@ -231,7 +221,7 @@ tabItem(tabName = "track",
 tabItem(tabName = "plot",
         h2("Magic by Olli")),
 
-# Modeling Tab -------------------------------------------------------------------
+# Modeling Tab ------------------------------------------------------------
 
 tabItem(tabName = "model",
   fluidRow(
@@ -245,21 +235,22 @@ tabItem(tabName = "model",
                          "None"),
              selected = "None"
            )
-    ),
-    box(column(width = 6,
-           verbatimTextOutput(outputId = "contents_mod"))
     )
-  )#,
-  # fluidRow(
-  #   column(width = 4)
-  # )
-  
-)
-      
+  ),
+  br(), # break
+  hr(), # horizonatl line not showing for some reason???
+  fluidRow(
+    column(width = 5,
+        verbatimTextOutput(outputId = "contents_mod"),
+        plotOutput(outputId = "mod_plot")
     )
   )
-    
   )
+
+
+
+# End UI!!!
+)))
 
 
 # Server ------------------------------------------------------------------
@@ -293,9 +284,6 @@ csvInput <- reactive({
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
-            #"Fisher ID 1016" = fisher_id_1016,
-            #"Fisher ID 1016 Day" = fisher_id_1016_day,
-            #"Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
@@ -323,16 +311,11 @@ csvInput <- reactive({
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
     }
-    # csv_uploaded <- read.csv(file = input$dataset_csv$datapath, 
-    #                          header = input$header, sep = input$sep, 
-    #                          quote = input$quote) 
     return(csv_uploaded)
-  } else if (values_csv$upload_state == 'reset') {
+  
+    } else if (values_csv$upload_state == 'reset') {
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
-            #"Fisher ID 1016" = fisher_id_1016,
-            #"Fisher ID 1016 Day" = fisher_id_1016_day,
-            #"Fisher ID 1016 Night" = fisher_id_1016_night,
             "None" = return()
     )
   }
@@ -419,14 +402,14 @@ output$epsg_tif <- renderUI({
 # Transform CRS of TIF Input
 # Use "env()" for extract_covariates(env()) not tifInput)!!!!!!!!!!!!!!!!!!!!!!!
 env <- reactive({
-  if (input$epsg_tif != input$epsg_trk) {
+  if (input$epsg_tif != input$epsg_trk && !is.null(input$epsg_tif)) {
     # ????????????????????????????????????????????????
     # Large Raster Layer introduces quite a few NAs
     # Use 'to' argument and projectExtent(object, crs) as template? 
     raster::projectRaster(tifInput(),
                           crs = sp::CRS(paste("+init=epsg:", 
                                               input$epsg_trk, sep = '')),
-                          res = res(tifInput()), # keep resolution
+                          res = raster::res(tifInput()), # keep resolution
                           # categorial vairiables (nearest neighbor)
                           method="ngb" #"bilinear",
     )
@@ -447,7 +430,7 @@ output$contents_tif <- reactive({
     need(tifInput(), ''),
     need(input$epsg_trk, '')
   )
-  raster::projection(env())
+  raster::projection(env()) # to test if the transformation worked (testing only)
 })
 
 
@@ -704,42 +687,99 @@ mod <- reactive({
   )
   # Multiple IDs selected (individual models)
   if (length(input$id_trk) > 1) {
-    return()
+    
+    # Fit RSF (Resource Selection Function; logistic regression)
+    if (input$model == "Resource Selection Function") {
+      set.seed(12345)
+      rsf_multi <- trk_resamp() %>% mutate(
+        m1 = map(data, ~ .x %>% random_points() %>% 
+                   extract_covariates(env()) %>%
+                   # Add renamed land use column ("lu") and convert to factor,
+                   # access covariates by TIF name stored in rater object (env),
+                   # parse to convert the string into an expression
+                   mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+                   fit_rsf(case_ ~ lu)))
+      # Plot: look at coefficients
+      rsf_multi %>% mutate(m1_sum = map(m1, ~ broom::tidy(.$model))) %>% 
+        select(id, m1_sum) %>% unnest %>% 
+        ggplot(aes(term, estimate, col = id)) + geom_point() + 
+        ggtitle("Resource Selection Function")
+      
+    } else if (input$model == "Step Selection Function (SSF)") {
+      set.seed(12345)
+      # Fit SSF (Step Selection Function; conditional logistic regression)
+      ssf_multi <- trk_resamp() %>% 
+        mutate(steps = map(data, steps_by_burst)) %>% 
+        filter(map_int(steps, nrow) > 100) %>% # 100 as option (any number)???
+        mutate(
+          m2 = map(steps, ~ .x %>% random_steps %>% 
+                     extract_covariates(env()) %>%
+                     # Add renamed land use column ("lu") and convert to factor
+                     mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+                     fit_ssf(case_ ~ lu + strata(step_id_))))
+      
+      # look at coefficients
+      ssf_multi %>% mutate(m2 = map(ssf_multi$m2, ~ broom::tidy(.$model))) %>% 
+        select(id, m2) %>% unnest %>% 
+        ggplot(aes(term, estimate, col = id)) + geom_point() + 
+        ggtitle("Step Selection Function")
+    } else if (input$model == "Integrated SSF") {
+      return()
+    }
+    
+    
   } else {
     # One ID selected (single model)
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
-      rsf_one <- trk_resamp() %>% random_points() %>% extract_covariates(env())
-      # Add renamed land use column ("lu") and convert to factor
-      rsf_one[["lu"]] <- rsf_one[[names(env())]] %>% as.factor()
-      rsf_one <- rsf_one %>% fit_rsf(case_ ~ lu)
+      rsf_one <- trk_resamp() %>% random_points() %>% 
+        extract_covariates(env()) %>%
+        # Add renamed land use column ("lu") and convert to factor
+        mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+        fit_rsf(case_ ~ lu)
       summary(rsf_one)
       
     } else if (input$model == "Step Selection Function (SSF)") {
       # Fit SSF (Step Selection Function; conditional logistic regression)
       set.seed(12345)
       ssf_one <- trk_resamp() %>% steps_by_burst() %>% random_steps() %>% 
-        extract_covariates(env())
-      # Add renamed land use column ("lu") and convert to factor
-      ssf_one[["lu"]] <- ssf_one[[names(env())]] %>% as.factor()
-      ssf_one <- ssf_one %>% fit_ssf(case_ ~ lu + strata(step_id_))
+        extract_covariates(env()) %>% 
+        # Add renamed land use column ("lu") and convert to factor
+        mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+        fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
+    } else if (input$model == "Integrated SSF") {
+      return()
     }
   }
 })
 
-# Output model fit
+# Output model fit (one ID only)
 output$contents_mod <- renderPrint({
   validate(
-    need(input$model != 'None', 'Please choose a model.')
+    # For one ID only
+    need(length(input$id_trk) == 1, '')
+  )
+  mod()
+})
+# Output model plot (multiple IDs only)
+output$mod_plot <- renderPlot({
+  validate(
+    # For multiple IDs only
+    need(length(input$id_trk) > 1, '')
   )
   mod()
 })
 
-# "Resource Selection Function", 
-# "Step Selection Function (SSF)", 
-# "Integrated SSF"
+
+
+
+# Visualize ----------------------------------------------------------------
+
+
+# Insert Olli MAGIC here!
+
 
 
 # End server!!!
