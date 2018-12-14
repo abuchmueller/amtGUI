@@ -210,14 +210,17 @@ ui <- fluidPage(
                         "None"),
             selected = "None"
             )
-        ),
-        column(width = 4,
-               verbatimTextOutput(outputId = "contents_mod")
-        )
-      )#,
-      # fluidRow(
-      #   column(width = 4)
-      # )
+        )#,
+        # column(width = 4,
+        #        verbatimTextOutput(outputId = "contents_mod")
+        # )
+      ),
+      fluidRow(
+        column(width = 5,
+               verbatimTextOutput(outputId = "contents_mod"),
+               plotOutput(outputId = "mod_plot")
+               )
+      )
              
     ),
     #### Tab: Plot ####
@@ -659,42 +662,85 @@ mod <- reactive({
   )
   # Multiple IDs selected (individual models)
   if (length(input$id_trk) > 1) {
-    return()
+    
+    # Fit RSF (Resource Selection Function; logistic regression)
+    if (input$model == "Resource Selection Function") {
+      set.seed(12345)
+      rsf_multi <- trk_resamp() %>% mutate(
+        m1 = map(data, ~ .x %>% random_points() %>% extract_covariates(env()) %>% 
+                   mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+                   fit_rsf(case_ ~ lu)))
+      # Plot: look at coefficients
+      rsf_multi %>% mutate(m1_sum = map(m1, ~ broom::tidy(.$model))) %>% 
+        select(id, m1_sum) %>% unnest %>% 
+        ggplot(aes(term, estimate, col = id)) + geom_point() + 
+        ggtitle("Resource Selection Function")
+    
+    } else if (input$model == "Step Selection Function (SSF)") {
+      set.seed(12345)
+      # Fit SSF (Step Selection Function; conditional logistic regression)
+      ssf_multi <- trk_resamp() %>% 
+        mutate(steps = map(data, steps_by_burst)) %>% 
+        filter(map_int(steps, nrow) > 100) %>% 
+        mutate(
+          m2 = map(steps, ~ .x %>% random_steps %>% 
+                     extract_covariates(env()) %>% 
+                     mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+                     fit_ssf(case_ ~ lu + strata(step_id_))))
+      
+      # look at coefficients
+      ssf_multi %>% mutate(m2 = map(ssf_multi$m2, ~ broom::tidy(.$model))) %>% 
+        select(id, m2) %>% unnest %>% 
+        ggplot(aes(term, estimate, col = id)) + geom_point() + 
+        ggtitle("Step Selection Function")
+    } else if (input$model == "Integrated SSF") {
+        return()
+      }
+    
+    
   } else {
     # One ID selected (single model)
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
-      rsf_one <- trk_resamp() %>% random_points() %>% extract_covariates(env())
-      # Add renamed land use column ("lu") and convert to factor
-      rsf_one[["lu"]] <- rsf_one[[names(env())]] %>% as.factor()
-      rsf_one <- rsf_one %>% fit_rsf(case_ ~ lu)
+      rsf_one <- trk_resamp() %>% random_points() %>% 
+        extract_covariates(env()) %>%
+        # Add renamed land use column ("lu") and convert to factor
+        mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+        fit_rsf(case_ ~ lu)
       summary(rsf_one)
       
     } else if (input$model == "Step Selection Function (SSF)") {
       # Fit SSF (Step Selection Function; conditional logistic regression)
       set.seed(12345)
       ssf_one <- trk_resamp() %>% steps_by_burst() %>% random_steps() %>% 
-        extract_covariates(env())
+        extract_covariates(env()) %>% 
       # Add renamed land use column ("lu") and convert to factor
-      ssf_one[["lu"]] <- ssf_one[[names(env())]] %>% as.factor()
-      ssf_one <- ssf_one %>% fit_ssf(case_ ~ lu + strata(step_id_))
+        mutate(lu = factor(eval(parse(text = names(env()))))) %>% 
+        fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
+    } else if (input$model == "Integrated SSF") {
+      return()
     }
   }
 })
 
-# Output model fit
+# Output model fit (one ID only)
 output$contents_mod <- renderPrint({
   validate(
-    need(input$model != 'None', 'Please choose a model.')
+    # For one ID only
+    need(length(input$id_trk) == 1, '')
   )
   mod()
 })
-
-# "Resource Selection Function", 
-# "Step Selection Function (SSF)", 
-# "Integrated SSF"
+# Output model plot (multiple IDs only)
+output$mod_plot <- renderPlot({
+  validate(
+    # For multiple IDs only
+    need(length(input$id_trk) > 1, '')
+  )
+  mod()
+})
 
 
 # End server!!!
