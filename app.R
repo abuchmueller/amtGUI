@@ -170,12 +170,10 @@ tabItem(tabName = "track",
            uiOutput(outputId = "id")
     ),
     # Transform EPSG Codes of CSV and TIF and select ID(s)
-    br(),
-    br(),
     column(width = 4, #offset = 1,
+           br(),
+           br(),
            uiOutput(outputId = "epsg_trk"),
-           #br(),
-           #br(),
            uiOutput(outputId = "id_trk")
     ),
     # Resample track
@@ -246,8 +244,11 @@ tabItem(tabName = "model",
            # Set number of random steps per relocation
            uiOutput(outputId = "rand_stps"),
            # Only retain bursts with a minimum number of relocations
-           uiOutput(outputId = "min_burst")
-           
+           uiOutput(outputId = "min_burst"),
+           # Extract covariates at the start/end/both of a step
+           uiOutput(outputId = "ext_cov"),
+           # Time of Day
+           uiOutput(outputId = "tod")
            )
   ),
   br(), # break
@@ -719,6 +720,34 @@ output$min_burst <- renderUI({
     step = 1
 )
 })
+# Extract covariates at the start/end/both of a step
+output$ext_cov <- renderUI({
+  validate(
+    # When multiple IDs selected only 
+    need(length(input$id_trk) > 1, ''),
+    need(input$model == "Integrated SSF", '')
+  )
+  selectInput(
+    inputId = "ext_cov",
+    label = "Extract Environmental Covariates:",
+    choices = c("start", "end", "both"),
+    selected = "both"
+  )
+})
+# Time of Day
+output$tod <- renderUI({
+  validate(
+    need(input$model == "Integrated SSF", '')
+  )
+  selectInput(
+    inputId = "tod",
+    label = "Time of Day:",
+    choices = c("excl. dawn and dusk" = FALSE, 
+                "incl. dawn and dusk" = TRUE),
+    selected = "excl. dawn and dusk"
+  )
+})
+
 # Fit model
 mod <- reactive({
   validate(
@@ -762,6 +791,7 @@ mod <- reactive({
         ggtitle("Step Selection Function")
     } else if (input$model == "Integrated SSF") {
       return()
+      # extract_covariates(wet, where = input$ext_cov)
     }
     
     
@@ -804,13 +834,13 @@ mod <- reactive({
       
       issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
         steps_by_burst() %>% time_of_day(include.crepuscule = FALSE) %>% 
-        amt::random_steps(n = input$rand_stps) %>% 
-        amt::extract_covariates(wet) %>% 
-        amt::time_of_day(include.crepuscule = FALSE) %>% 
+        random_steps(n = input$rand_stps) %>% 
+        extract_covariates(wet) %>% 
+        time_of_day(include.crepuscule = input$tod) #%>% 
         #mutate(log_sl_ = log(sl_))
-        fit_issf(case_ ~ wet +  sl_  + wet:tod_end_ + sl_:tod_end_ + 
+      issf_one_fit <- issf_one %>% fit_issf(case_ ~ wet +  sl_  + wet:tod_end_ + sl_:tod_end_ + 
                    strata(step_id_))
-      summary(issf_one)
+      summary(issf_one_fit)
     }
   }
 })
