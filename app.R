@@ -243,13 +243,11 @@ tabItem(tabName = "model",
            )
     ),
     column(width = 4,
-           numericInput(
-             inputId = "rand_stps",
-             label = "Random Steps:",
-             value = 10, #NA,
-             min = 1,
-             step = 1
-           )
+           # Set number of random steps per relocation
+           uiOutput(outputId = "rand_stps"),
+           # Only retain bursts with a minimum number of relocations
+           uiOutput(outputId = "min_burst")
+           
            )
   ),
   br(), # break
@@ -695,7 +693,32 @@ output$summary_samp_rate <- DT::renderDataTable({
 
 # Modeling ----------------------------------------------------------------
 
-
+# Set number of random steps per relocation
+output$rand_stps <- renderUI({
+  validate(
+    need(input$model == "Integrated SSF", '')
+  )
+  numericInput(
+    inputId = "rand_stps",
+    label = "Random Steps:",
+    value = 10, #NA,
+    min = 1,
+    step = 1
+)
+})
+# Only retain bursts with a minimum number of relocations
+output$min_burst <- renderUI({
+  validate(
+    need(input$model == "Integrated SSF", '')
+  )
+  numericInput(
+    inputId = "min_burst",
+    label = "Minimum No. of Relocations per Burst:",
+    value = 3, #NA,
+    min = 1,
+    step = 1
+)
+})
 # Fit model
 mod <- reactive({
   validate(
@@ -764,12 +787,22 @@ mod <- reactive({
         fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
     } else if (input$model == "Integrated SSF") {
+      # Test whether minimum no. of relocations per burst is too high (no 
+      # observations left) 
+      validate(
+        need(length((trk_resamp() %>% 
+                       filter_min_n_burst(min_n = input$min_burst))$burst_) != 0,
+'The minimum no. of relocations per burst is too high, please choose a lower 
+ one. Alternatively you may choose a lower resampling rate, i.e., 
+ a larger interval (in min) to keep the current no. of minimum relocations 
+ per burst.')
+      )
       set.seed(12345)
       
       wet <- env() == 90
       names(wet) <- "wet"
       
-      issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = 3) %>% 
+      issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
         steps_by_burst() %>% time_of_day(include.crepuscule = FALSE) %>% 
         amt::random_steps(n = input$rand_stps) %>% 
         amt::extract_covariates(wet) %>% 
