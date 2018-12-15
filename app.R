@@ -180,7 +180,7 @@ tabItem(tabName = "track",
     ),
     # Resample track
     column(width = 4, #offset = 1,
-           #uiOutput(outputId = "rate_min"),
+           h4("Resample Track"),
            numericInput(
              inputId = "rate_min",
              label = "Resampling Rate (in min):",
@@ -241,7 +241,16 @@ tabItem(tabName = "model",
                          "None"),
              selected = "None"
            )
-    )
+    ),
+    column(width = 4,
+           numericInput(
+             inputId = "rand_stps",
+             label = "Random Steps:",
+             value = 10, #NA,
+             min = 1,
+             step = 1
+           )
+           )
   ),
   br(), # break
   hr(), # horizontal line not showing for some reason???
@@ -373,6 +382,7 @@ tifInput <- reactive({
             "None" = return()
     )
   } else if (values_tif$upload_state == 'uploaded') {
+    # Rename uploaded TIF for usage in model building
     names(raster::raster(x = input$dataset_tif$datapath)) <- "land_use"
   } else if (values_tif$upload_state == 'reset') {
     switch (input$ex_data_tif,
@@ -754,7 +764,20 @@ mod <- reactive({
         fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
     } else if (input$model == "Integrated SSF") {
-      return()
+      set.seed(12345)
+      
+      wet <- env() == 90
+      names(wet) <- "wet"
+      
+      issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = 3) %>% 
+        steps_by_burst() %>% time_of_day(include.crepuscule = FALSE) %>% 
+        amt::random_steps(n = input$rand_stps) %>% 
+        amt::extract_covariates(wet) %>% 
+        amt::time_of_day(include.crepuscule = FALSE) %>% 
+        #mutate(log_sl_ = log(sl_))
+        fit_issf(case_ ~ wet +  sl_  + wet:tod_end_ + sl_:tod_end_ + 
+                   strata(step_id_))
+      summary(issf_one)
     }
   }
 })
