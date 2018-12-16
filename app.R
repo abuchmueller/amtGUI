@@ -775,8 +775,8 @@ output$mod_var <- renderUI({
     need(!is.null(input$lu_name), 'Please assign name to land use area first.')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                           "step_id_", "x1_", "x2_", 
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_",
+                                           "step_id_", "x1_", "x2_",
                                            "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
@@ -787,22 +787,34 @@ output$mod_var <- renderUI({
     #selected = sort(names(mod_pre()))[-pos_excl]
   )
 })
+
 # Filter logarithmized model variables
 output$log_var <- renderUI({
   validate(
     need(mod_pre(), '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                                  "step_id_", "x1_", "x2_", 
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_",
+                                                  "step_id_", "x1_", "x2_",
                                                   "y1_", "y2_", "t1_", "t2_"))
+  # Create options list with "log labels" assigned to model variables
+  var <- sort(names(mod_pre()))[-pos_excl]
+  lvar <- vector()
+  lvar_choices <- vector()
+
+  for (i in 1:length(var)) {
+    lvar[i] <- paste("log_", var[i], sep = '')
+    lvar_choices[i] <- paste(lvar[i], " = \"", var[i], "\"", sep = '')
+  }
+  lvar_choices <- eval(parse(text = paste("c(", paste(lvar_choices,
+                                                      collapse = ", "), ")",
+                                          sep = '')))
   
   selectizeInput(
     inputId = "log_var", 
     label = "Select Log Variables:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
-    multiple = TRUE#,
-    #selected = sort(names(mod_pre()))[-pos_excl]
+    choices = lvar_choices,
+    multiple = TRUE
   )
 })
 # Slider for no. of interaction terms to add
@@ -822,18 +834,18 @@ output$inter_no <- renderUI({
 # Filter interaction term (1)
 output$inter_1 <- renderUI({
   validate(
-    need(mod_pre(), ''),
+    need(mod_pre_log(), ''),
     need(input$inter_no >= 1, '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+  pos_excl <- which(sort(names(mod_pre_log())) %in% c("case_", "burst_", "dt_", 
                                                   "step_id_", "x1_", "x2_", 
                                                   "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
     inputId = "inter_1", 
     label = "Create 1st Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = sort(names(mod_pre_log()))[-pos_excl], 
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -841,18 +853,18 @@ output$inter_1 <- renderUI({
 # Filter interaction term (2)
 output$inter_2 <- renderUI({
   validate(
-    need(mod_pre(), ''),
+    need(mod_pre_log(), ''),
     need(input$inter_no >= 2, '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+  pos_excl <- which(sort(names(mod_pre_log())) %in% c("case_", "burst_", "dt_", 
                                                   "step_id_", "x1_", "x2_", 
                                                   "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
     inputId = "inter_2", 
     label = "Create 2nd Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = sort(names(mod_pre_log()))[-pos_excl], 
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -860,18 +872,18 @@ output$inter_2 <- renderUI({
 # Filter interaction term (3)
 output$inter_3 <- renderUI({
   validate(
-    need(mod_pre(), ''),
+    need(mod_pre_log(), ''),
     need(input$inter_no >= 3, '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+  pos_excl <- which(sort(names(mod_pre_log())) %in% c("case_", "burst_", "dt_", 
                                                   "step_id_", "x1_", "x2_", 
                                                   "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
     inputId = "inter_3", 
     label = "Create 3rd Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = sort(names(mod_pre_log()))[-pos_excl], 
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -879,18 +891,18 @@ output$inter_3 <- renderUI({
 # Filter interaction term (4)
 output$inter_4 <- renderUI({
   validate(
-    need(mod_pre(), ''),
+    need(mod_pre_log(), ''),
     need(input$inter_no >= 4, '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+  pos_excl <- which(sort(names(mod_pre_log())) %in% c("case_", "burst_", "dt_", 
                                                   "step_id_", "x1_", "x2_", 
                                                   "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
     inputId = "inter_4", 
     label = "Create 4th Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = sort(names(mod_pre_log()))[-pos_excl], 
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -898,18 +910,18 @@ output$inter_4 <- renderUI({
 # Filter interaction term (5)
 output$inter_5 <- renderUI({
   validate(
-    need(mod_pre(), ''),
+    need(mod_pre_log(), ''),
     need(input$inter_no == 5, '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+  pos_excl <- which(sort(names(mod_pre_log())) %in% c("case_", "burst_", "dt_", 
                                                   "step_id_", "x1_", "x2_", 
                                                   "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
     inputId = "5", 
     label = "Create 5th Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = sort(names(mod_pre_log()))[-pos_excl], 
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -986,8 +998,10 @@ mod_pre <- reactive({
  one. Alternatively you may choose a lower resampling rate, i.e., 
  a larger interval (in min) to keep the current no. of minimum relocations 
  per burst.'),
-        need(!is.null(input$lu), 'Please choose land use area first.'),
-        need(!is.null(input$lu_name), 'Please assign name to land use area first.')
+        # 2 need below not working!
+        need(!is.null(input$lu), 'Please choose land use area first.'), 
+        need(!is.null(input$lu_name), 'Please assign name to land use area 
+             first.')
       )
       set.seed(12345)
       
@@ -997,7 +1011,8 @@ mod_pre <- reactive({
       lu_area <- env() == as.numeric(input$lu)
       names(lu_area) <- input$lu_name
       
-      issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+      issf_one <- trk_resamp() %>% 
+        filter_min_n_burst(min_n = input$min_burst) %>% 
         steps_by_burst() %>% 
         random_steps(n = input$rand_stps) %>% 
         extract_covariates(lu_area) %>% 
@@ -1008,6 +1023,24 @@ mod_pre <- reactive({
   }
 })
 
+# Add logarithmized model variables to mod_pre
+mod_pre_log <- reactive({
+  if (!is.null(input$log_var)) {
+    for (i in 1:length(input$log_var)) {
+      # Add logarithmized variable
+      mod_pre_log <- mod_pre() %>% mutate(lvar = eval(parse(text = paste(
+        "log(", input$log_var[i], ")", sep = ''))))
+      # Copy column with unique name
+      mod_pre_log[[paste("log_", input$log_var[i],
+                      sep = '')]] <- mod_pre_log[["lvar"]]
+      # Remove duplicated "lvar" column
+      mod_pre_log <- mod_pre_log %>% dplyr::select(- lvar)
+    }
+    mod_pre_log
+  } else {
+    mod_pre()
+  }
+})
 
 # Fit model
 mod <- reactive({
@@ -1077,16 +1110,15 @@ mod <- reactive({
         mutate(lu = factor(land_use)) %>%
         fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
+      
     } else if (input$model == "Integrated SSF") {
-      # issf_one_fit <- mod_pre() %>% fit_issf(case_ ~ wet +  sl_  + wet:tod_end_ + sl_:tod_end_ + 
-      #              strata(step_id_))
       validate(
         need(!is.na(input$lu), 'Please choose land use area first.'),
-        need(!is.null(input$lu_name), 'Please assign name to land use area first.'),
+        need(!is.null(input$lu_name), 'Please assign name to land use area 
+             first.'),
         need(!is.null(input$mod_var), 'Please select model variables.')
       )
-      # Rename mod_pre input for usage below
-      issf_one <- mod_pre()
+      set.seed(12345)
       
       # Model variables
       p_var <- paste(input$mod_var, collapse = " + ")
@@ -1096,15 +1128,6 @@ mod <- reactive({
         # Create empty vector to store column names created below
         log_names <- vector()
         for (i in 1:length(input$log_var)) {
-          # Add logarithmized variable
-          issf_one <- issf_one %>% mutate(lvar = eval(parse(text = paste(
-            "log(", input$log_var[i], ")", sep = ''))))
-          # Copy column with unique name
-          issf_one[[paste("log_", input$log_var[i], 
-                           sep = '')]] <- issf_one[["lvar"]]
-          # Remove duplicated column
-          issf_one <- issf_one %>% dplyr::select(- lvar)
-          # Write column names to vector
           log_names[i] <- paste("log_", input$log_var[i], sep = '')
         }
       }
@@ -1134,10 +1157,10 @@ mod <- reactive({
                                       input$inter_5[2], sep = ''), 
                           no = '')
       # Concatenate all variable types
-      p_all_var <- paste(p_var, p_log, p_inter_1, p_inter_2, p_inter_3, p_inter_4, 
-                          p_inter_5, sep = '')
+      p_all_var <- paste(p_var, p_log, p_inter_1, p_inter_2, p_inter_3, 
+                         p_inter_4, p_inter_5, sep = '')
       
-      issf_one_fit <- issf_one %>% 
+      issf_one_fit <- mod_pre_log() %>% 
         fit_issf(as.formula(paste("case_ ~", p_all_var, "+ strata(step_id_)")))
       summary(issf_one_fit)
     }
