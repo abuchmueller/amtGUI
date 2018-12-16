@@ -229,7 +229,7 @@ tabItem(tabName = "plot",
 
 tabItem(tabName = "model",
   fluidRow(
-    column(width = 4, #offset = 1,
+    column(width = 2, #offset = 1,
            radioButtons(
              inputId = "model",
              label = h4("Choose a Model:"),
@@ -240,7 +240,7 @@ tabItem(tabName = "model",
              selected = "None"
            )
     ),
-    column(width = 4,
+    column(width = 2,
            # Set number of random steps per relocation
            uiOutput(outputId = "rand_stps"),
            # Only retain bursts with a minimum number of relocations
@@ -249,6 +249,26 @@ tabItem(tabName = "model",
            uiOutput(outputId = "ext_cov"),
            # Time of Day
            uiOutput(outputId = "tod")
+           ),
+    column(width = 3,
+           # Select land use area
+           uiOutput(outputId = "lu"),
+           # Assign land use covariate name
+           uiOutput(outputId = "lu_name"),
+           # Select model variables
+           uiOutput(outputId = "mod_var"),
+           # Select logarithmized model variables
+           uiOutput(outputId = "log_var")
+           ),
+    column(width = 2,
+           # Select no. of interaction terms to add
+           uiOutput(outputId = "inter_no"),
+           # Select 1st to 5th interaction
+           uiOutput(outputId = "inter_1"),
+           uiOutput(outputId = "inter_2"),
+           uiOutput(outputId = "inter_3"),
+           uiOutput(outputId = "inter_4"),
+           uiOutput(outputId = "inter_5")
            )
   ),
   br(), # break
@@ -747,6 +767,247 @@ output$tod <- renderUI({
     selected = "excl. dawn and dusk"
   )
 })
+# Filter model variables
+output$mod_var <- renderUI({
+  validate(
+    need(mod_pre(), ''),
+    need(!is.null(input$lu), 'Please choose land use area first.'),
+    need(!is.null(input$lu_name), 'Please assign name to land use area first.')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                           "step_id_", "x1_", "x2_", 
+                                           "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "mod_var", 
+    label = "Select Variables:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE#,
+    #selected = sort(names(mod_pre()))[-pos_excl]
+  )
+})
+# Filter logarithmized model variables
+output$log_var <- renderUI({
+  validate(
+    need(mod_pre(), '')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                                  "step_id_", "x1_", "x2_", 
+                                                  "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "log_var", 
+    label = "Select Log Variables:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE#,
+    #selected = sort(names(mod_pre()))[-pos_excl]
+  )
+})
+# Slider for no. of interaction terms to add
+output$inter_no <- renderUI({
+  validate(
+    need(mod_pre(), '')
+  )
+  sliderInput(
+    inputId = "inter_no",
+    label = "Select No. of Interaction Terms:",
+    min = 0,
+    max = 5,
+    value = 2,
+    step = 1
+  )
+})
+# Filter interaction term (1)
+output$inter_1 <- renderUI({
+  validate(
+    need(mod_pre(), ''),
+    need(input$inter_no >= 1, '')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                                  "step_id_", "x1_", "x2_", 
+                                                  "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "inter_1", 
+    label = "Create 1st Interaction:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE,
+    options = list(maxItems = 2)
+  )
+})
+# Filter interaction term (2)
+output$inter_2 <- renderUI({
+  validate(
+    need(mod_pre(), ''),
+    need(input$inter_no >= 2, '')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                                  "step_id_", "x1_", "x2_", 
+                                                  "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "inter_2", 
+    label = "Create 2nd Interaction:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE,
+    options = list(maxItems = 2)
+  )
+})
+# Filter interaction term (3)
+output$inter_3 <- renderUI({
+  validate(
+    need(mod_pre(), ''),
+    need(input$inter_no >= 3, '')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                                  "step_id_", "x1_", "x2_", 
+                                                  "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "inter_3", 
+    label = "Create 3rd Interaction:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE,
+    options = list(maxItems = 2)
+  )
+})
+# Filter interaction term (4)
+output$inter_4 <- renderUI({
+  validate(
+    need(mod_pre(), ''),
+    need(input$inter_no >= 4, '')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                                  "step_id_", "x1_", "x2_", 
+                                                  "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "inter_4", 
+    label = "Create 4th Interaction:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE,
+    options = list(maxItems = 2)
+  )
+})
+# Filter interaction term (5)
+output$inter_5 <- renderUI({
+  validate(
+    need(mod_pre(), ''),
+    need(input$inter_no == 5, '')
+  )
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
+                                                  "step_id_", "x1_", "x2_", 
+                                                  "y1_", "y2_", "t1_", "t2_"))
+  
+  selectizeInput(
+    inputId = "5", 
+    label = "Create 5th Interaction:",
+    choices = sort(names(mod_pre()))[-pos_excl], 
+    multiple = TRUE,
+    options = list(maxItems = 2)
+  )
+})
+# Select land use covariate
+output$lu <- renderUI({
+  # validate(
+  #   need(mod_pre(), '')
+  # )
+  selectInput(
+    inputId = "lu",
+    label = "Choose Land Use Area:",
+    choices = c('', sort(unique(raster::values(env())))),
+    selected = NULL
+  )
+})
+# Assign land use covariate name
+output$lu_name <- renderUI({
+  # validate(
+  #   need(mod_pre(), '')
+  # )
+  textInput(
+    inputId = "lu_name",
+    label = "Assign Name to Land Use Covariate:",
+    placeholder = "Please type in a name.",
+    value = NULL
+  )
+})
+
+# Fit model (data preparation)
+mod_pre <- reactive({
+  validate(
+    need(input$model != 'None', '')
+  )
+  # Multiple IDs selected (individual models)
+  if (length(input$id_trk) > 1) {
+    
+    # Fit RSF (Resource Selection Function; logistic regression)
+    if (input$model == "Resource Selection Function") {
+      
+    } else if (input$model == "Step Selection Function (SSF)") {
+      
+    } else if (input$model == "Integrated SSF") {
+      return()
+      # extract_covariates(wet, where = input$ext_cov)
+    }
+    
+    
+  } else {
+    # One ID selected (single model)
+    # Fit RSF (Resource Selection Function; logistic regression)
+    if (input$model == "Resource Selection Function") {
+      # set.seed(12345)
+      # rsf_one <- trk_resamp() %>% random_points() %>% 
+      #   extract_covariates(env()) %>%
+      #   # Add renamed land use column ("lu") and convert to factor 
+      #   mutate(lu = factor(land_use))
+      
+    } else if (input$model == "Step Selection Function (SSF)") {
+      # Fit SSF (Step Selection Function; conditional logistic regression)
+      # set.seed(12345)
+      # ssf_one <- trk_resamp() %>% steps_by_burst() %>% random_steps() %>% 
+      #   extract_covariates(env()) %>% 
+      #   # Add renamed land use column ("lu") and convert to factor 
+      #   mutate(lu = factor(land_use))
+        
+    } else if (input$model == "Integrated SSF") {
+      # Test whether minimum no. of relocations per burst is too high (no 
+      # observations left) 
+      validate(
+        need(length((trk_resamp() %>% 
+                       filter_min_n_burst(min_n = input$min_burst))$burst_) != 0,
+'The minimum no. of relocations per burst is too high, please choose a lower 
+ one. Alternatively you may choose a lower resampling rate, i.e., 
+ a larger interval (in min) to keep the current no. of minimum relocations 
+ per burst.'),
+        need(!is.null(input$lu), 'Please choose land use area first.'),
+        need(!is.null(input$lu_name), 'Please assign name to land use area first.')
+      )
+      set.seed(12345)
+      
+      # wet <- env() == 90
+      # names(wet) <- "wet"
+      
+      lu_area <- env() == as.numeric(input$lu)
+      names(lu_area) <- input$lu_name
+      
+      issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+        steps_by_burst() %>% 
+        random_steps(n = input$rand_stps) %>% 
+        extract_covariates(lu_area) %>% 
+        time_of_day(include.crepuscule = input$tod)
+      
+      issf_one
+    }
+  }
+})
+
 
 # Fit model
 mod <- reactive({
@@ -817,29 +1078,67 @@ mod <- reactive({
         fit_ssf(case_ ~ lu + strata(step_id_))
       summary(ssf_one)
     } else if (input$model == "Integrated SSF") {
-      # Test whether minimum no. of relocations per burst is too high (no 
-      # observations left) 
+      # issf_one_fit <- mod_pre() %>% fit_issf(case_ ~ wet +  sl_  + wet:tod_end_ + sl_:tod_end_ + 
+      #              strata(step_id_))
       validate(
-        need(length((trk_resamp() %>% 
-                       filter_min_n_burst(min_n = input$min_burst))$burst_) != 0,
-'The minimum no. of relocations per burst is too high, please choose a lower 
- one. Alternatively you may choose a lower resampling rate, i.e., 
- a larger interval (in min) to keep the current no. of minimum relocations 
- per burst.')
+        need(!is.na(input$lu), 'Please choose land use area first.'),
+        need(!is.null(input$lu_name), 'Please assign name to land use area first.'),
+        need(!is.null(input$mod_var), 'Please select model variables.')
       )
-      set.seed(12345)
+      # Rename mod_pre input for usage below
+      issf_one <- mod_pre()
       
-      wet <- env() == 90
-      names(wet) <- "wet"
+      # Model variables
+      p_var <- paste(input$mod_var, collapse = " + ")
       
-      issf_one <- trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
-        steps_by_burst() %>% time_of_day(include.crepuscule = FALSE) %>% 
-        random_steps(n = input$rand_stps) %>% 
-        extract_covariates(wet) %>% 
-        time_of_day(include.crepuscule = input$tod) #%>% 
-        #mutate(log_sl_ = log(sl_))
-      issf_one_fit <- issf_one %>% fit_issf(case_ ~ wet +  sl_  + wet:tod_end_ + sl_:tod_end_ + 
-                   strata(step_id_))
+      # Add logarithmized model variables
+      if (!is.null(input$log_var)) {
+        # Create empty vector to store column names created below
+        log_names <- vector()
+        for (i in 1:length(input$log_var)) {
+          # Add logarithmized variable
+          issf_one <- issf_one %>% mutate(lvar = eval(parse(text = paste(
+            "log(", input$log_var[i], ")", sep = ''))))
+          # Copy column with unique name
+          issf_one[[paste("log_", input$log_var[i], 
+                           sep = '')]] <- issf_one[["lvar"]]
+          # Remove duplicated column
+          issf_one <- issf_one %>% dplyr::select(- lvar)
+          # Write column names to vector
+          log_names[i] <- paste("log_", input$log_var[i], sep = '')
+        }
+      }
+      p_log <- ifelse(length(input$log_var) > 0, 
+                      yes = paste(" +", paste(log_names, collapse = " + ")),
+                      no = '')
+      
+      # Interaction terms
+      p_inter_1 <- ifelse(length(input$inter_1) == 2, 
+                          yes = paste(" + ", input$inter_1[1], ":", 
+                                      input$inter_1[2], sep = ''), 
+                          no = '')
+      p_inter_2 <- ifelse(length(input$inter_2) == 2, 
+                          yes = paste(" + ", input$inter_2[1], ":", 
+                                      input$inter_2[2], sep = ''), 
+                          no = '')
+      p_inter_3 <- ifelse(length(input$inter_3) == 2, 
+                          yes = paste(" + ", input$inter_3[1], ":", 
+                                      input$inter_3[2], sep = ''), 
+                          no = '')
+      p_inter_4 <- ifelse(length(input$inter_4) == 2, 
+                          yes = paste(" + ", input$inter_4[1], ":", 
+                                      input$inter_4[2], sep = ''), 
+                          no = '')
+      p_inter_5 <- ifelse(length(input$inter_5) == 2, 
+                          yes = paste(" + ", input$inter_5[1], ":", 
+                                      input$inter_5[2], sep = ''), 
+                          no = '')
+      # Concatenate all variable types
+      p_all_var <- paste(p_var, p_log, p_inter_1, p_inter_2, p_inter_3, p_inter_4, 
+                          p_inter_5, sep = '')
+      
+      issf_one_fit <- issf_one %>% 
+        fit_issf(as.formula(paste("case_ ~", p_all_var, "+ strata(step_id_)")))
       summary(issf_one_fit)
     }
   }
