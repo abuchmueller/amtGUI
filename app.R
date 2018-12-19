@@ -39,7 +39,9 @@ ui <- dashboardPage(skin = "green",
     sidebarMenu(
       menuItem("Data Upload", tabName = "data", icon = icon("file-upload")),
       menuItem("Upload Map", tabName = "map", icon = icon("upload")),
-      menuItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
+      menuItem("Configure Analysis", tabName = "configure", icon = icon("database"),
+      menuSubItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
+      menuSubItem("Add Covariates", tabName = "covariates", icon = icon("database"))),
       menuItem("Modeling", tabName = "model", icon = icon("database")),
       menuItem("Visualize", tabName = "plot", icon = icon("chart-area"))
     )),
@@ -157,7 +159,6 @@ ui <- dashboardPage(skin = "green",
               )),
 
 # Track Creation Tab ------------------------------------------------------
-
 tabItem(tabName = "track",
   fluidRow(
     # Create a track
@@ -194,7 +195,9 @@ tabItem(tabName = "track",
              value = NA, #2,
              min = 0,
              step = 1
-           )
+           ),
+           # Only retain bursts with a minimum number of relocations
+           uiOutput(outputId = "min_burst")
     )
   ),
   hr(),
@@ -220,6 +223,26 @@ tabItem(tabName = "track",
   )
 ),
 
+# Add Additional Covariates Tab -------------------------------------------
+tabItem(tabName = "covariates",
+        fluidRow(
+          # Create a track
+          column(width = 4, #offset = 1,
+                 #uiOutput(outputId = "min_burst")
+                   numericInput(
+                     inputId = "min_burst",
+                     label = "Minimum No. of Relocations per Burst:",
+                     value = 3, #NA,
+                     min = 1,
+                     step = 1
+                   )
+                 )
+        ),
+        hr(),
+        fluidRow(
+        )
+),
+
 # Visualize Tab -----------------------------------------------------------
 
 tabItem(tabName = "plot",
@@ -234,7 +257,7 @@ tabItem(tabName = "model",
              inputId = "model",
              label = h4("Choose a Model:"),
              choices = c("Resource Selection Function", 
-                         "Step Selection Function (SSF)", 
+                         "Step Selection Function (SSF)",
                          "Integrated SSF",
                          "None"),
              selected = "None"
@@ -243,8 +266,6 @@ tabItem(tabName = "model",
     column(width = 2,
            # Set number of random steps per relocation
            uiOutput(outputId = "rand_stps"),
-           # Only retain bursts with a minimum number of relocations
-           uiOutput(outputId = "min_burst"),
            # Extract covariates at the start/end/both of a step
            uiOutput(outputId = "ext_cov"),
            # Time of Day
@@ -627,7 +648,7 @@ trk_resamp <- reactive({
   )
   # Multiple IDs selected
   if (length(input$id_trk) > 1) {
-    group_by(trk(), id) %>% nest() %>% 
+    t_res <- group_by(trk(), id) %>% nest() %>% 
       mutate(data = map(data, ~ .x %>% 
                           track_resample(rate = minutes(input$rate_min),
                                          tolerance = minutes(input$tol_min))))
@@ -712,6 +733,26 @@ output$summary_samp_rate <- DT::renderDataTable({
 
 
 
+# Add Additional Covariates -----------------------------------------------
+
+# Only retain bursts with a minimum number of relocations
+# output$min_burst <- renderUI({
+#   validate(
+#     need(input$rate_min && input$tol_min, 
+#          'Please choose a resampling rate and tolerance in previous tab first.')
+#   )
+#   numericInput(
+#     inputId = "min_burst",
+#     label = "Minimum No. of Relocations per Burst:",
+#     value = 3, #NA,
+#     min = 1,
+#     step = 1
+#   )
+# })
+
+
+
+
 # Modeling ----------------------------------------------------------------
 
 # Set number of random steps per relocation
@@ -723,19 +764,6 @@ output$rand_stps <- renderUI({
     inputId = "rand_stps",
     label = "Random Steps:",
     value = 10, #NA,
-    min = 1,
-    step = 1
-)
-})
-# Only retain bursts with a minimum number of relocations
-output$min_burst <- renderUI({
-  validate(
-    need(input$model == "Integrated SSF", '')
-  )
-  numericInput(
-    inputId = "min_burst",
-    label = "Minimum No. of Relocations per Burst:",
-    value = 3, #NA,
     min = 1,
     step = 1
 )
