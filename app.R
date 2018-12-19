@@ -235,7 +235,9 @@ tabItem(tabName = "covariates",
                      value = 3, #NA,
                      min = 1,
                      step = 1
-                   )
+                   ),
+                 # Time of Day
+                 uiOutput(outputId = "tod")
                  )
         ),
         hr(),
@@ -267,9 +269,7 @@ tabItem(tabName = "model",
            # Set number of random steps per relocation
            uiOutput(outputId = "rand_stps"),
            # Extract covariates at the start/end/both of a step
-           uiOutput(outputId = "ext_cov"),
-           # Time of Day
-           uiOutput(outputId = "tod")
+           uiOutput(outputId = "ext_cov")
            ),
     column(width = 3,
            # Select land use area
@@ -735,20 +735,17 @@ output$summary_samp_rate <- DT::renderDataTable({
 
 # Add Additional Covariates -----------------------------------------------
 
-# Only retain bursts with a minimum number of relocations
-# output$min_burst <- renderUI({
-#   validate(
-#     need(input$rate_min && input$tol_min, 
-#          'Please choose a resampling rate and tolerance in previous tab first.')
-#   )
-#   numericInput(
-#     inputId = "min_burst",
-#     label = "Minimum No. of Relocations per Burst:",
-#     value = 3, #NA,
-#     min = 1,
-#     step = 1
-#   )
-# })
+# Time of Day
+output$tod <- renderUI({
+  selectInput(
+    inputId = "tod",
+    label = "Time of Day:",
+    choices = c("",
+                "excl. dawn and dusk" = FALSE, 
+                "incl. dawn and dusk" = TRUE),
+    selected = "" #"excl. dawn and dusk"
+  )
+})
 
 
 
@@ -780,19 +777,6 @@ output$ext_cov <- renderUI({
     label = "Extract Environmental Covariates:",
     choices = c("start", "end", "both"),
     selected = "both"
-  )
-})
-# Time of Day
-output$tod <- renderUI({
-  validate(
-    need(input$model == "Integrated SSF", '')
-  )
-  selectInput(
-    inputId = "tod",
-    label = "Time of Day:",
-    choices = c("excl. dawn and dusk" = FALSE, 
-                "incl. dawn and dusk" = TRUE),
-    selected = "excl. dawn and dusk"
   )
 })
 # Filter model variables
