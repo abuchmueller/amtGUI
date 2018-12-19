@@ -266,10 +266,10 @@ tabItem(tabName = "model",
            )
     ),
     column(width = 2,
-           # Set number of random steps per relocation
+           # Set number of random steps per relocation (ISSF)
            uiOutput(outputId = "rand_stps"),
-           # Extract covariates at the start/end/both of a step
-           uiOutput(outputId = "ext_cov")
+           # Set number of random points (RSF)
+           uiOutput(outputId = "rand_points")
            ),
     column(width = 3,
            # Select land use area
@@ -765,18 +765,17 @@ output$rand_stps <- renderUI({
     step = 1
 )
 })
-# Extract covariates at the start/end/both of a step
-output$ext_cov <- renderUI({
+# Set random points (RSF)
+output$rand_points <- renderUI({
   validate(
-    # When multiple IDs selected only 
-    need(length(input$id_trk) > 1, ''),
-    need(input$model == "Integrated SSF", '')
+    need(input$model == "Resource Selection Function", '')
   )
-  selectInput(
-    inputId = "ext_cov",
-    label = "Extract Environmental Covariates:",
-    choices = c("start", "end", "both"),
-    selected = "both"
+  numericInput(
+    inputId = "rand_points",
+    label = "Set No. of Random Points:",
+    value = 100,
+    min = 1,
+    step = 1
   )
 })
 # Filter model variables
@@ -1066,7 +1065,7 @@ mod <- reactive({
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
       rsf_multi <- trk_resamp() %>% mutate(
-        m1 = map(data, ~ .x %>% random_points() %>% 
+        m1 = map(data, ~ .x %>% random_points(n = input$rand_points) %>% 
                    extract_covariates(env()) %>%
                    # Add renamed land use column ("lu") and convert to factor,
                    mutate(lu = factor(land_use)) %>% 
@@ -1106,7 +1105,7 @@ mod <- reactive({
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
-      rsf_one <- trk_resamp() %>% random_points() %>% 
+      rsf_one <- trk_resamp() %>% random_points(n = input$rand_points) %>% 
         extract_covariates(env()) %>%
         # Add renamed land use column ("lu") and convert to factor 
         mutate(lu = factor(land_use)) %>%
