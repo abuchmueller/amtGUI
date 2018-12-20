@@ -1063,11 +1063,9 @@ mod <- reactive({
                    # Add renamed land use column ("lu") and convert to factor,
                    mutate(lu = factor(land_use)) %>% 
                    fit_rsf(case_ ~ lu)))
-      # Plot: look at coefficients
+      # Data frame with coefficients
       rsf_multi %>% mutate(m1_sum = map(m1, ~ broom::tidy(.$model))) %>% 
-        select(id, m1_sum) %>% unnest %>% 
-        ggplot(aes(term, estimate, col = id)) + geom_point() + 
-        ggtitle("Resource Selection Function")
+        select(id, m1_sum) %>% unnest %>% as.data.frame()
       
     } else if (input$model == "Integrated Step Selection Function") {
       set.seed(12345)
