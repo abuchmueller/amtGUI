@@ -653,9 +653,9 @@ trk_resamp <- reactive({
   )
   # Multiple IDs selected
   if (length(input$id_trk) > 1) {
-    t_res <- trk() %>% track_resample(rate = minutes(input$rate_min), 
-                                      tolerance = minutes(input$tol_min))
-    group_by(t_res, id) %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+    t_res <- group_by(trk(), id) %>% track_resample(
+      rate = minutes(input$rate_min), tolerance = minutes(input$tol_min))
+    t_res %>% filter_min_n_burst(min_n = input$min_burst) %>% 
       nest()
     # group_by(trk(), id) %>% nest() %>% 
     #   mutate(data = map(data, ~ .x %>% 
