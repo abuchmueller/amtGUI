@@ -226,16 +226,7 @@ tabItem(tabName = "track",
 # Add Additional Covariates Tab -------------------------------------------
 tabItem(tabName = "covariates",
         fluidRow(
-          # Create a track
           column(width = 4, #offset = 1,
-                 #uiOutput(outputId = "min_burst")
-                   numericInput(
-                     inputId = "min_burst",
-                     label = "Minimum No. of Relocations per Burst:",
-                     value = 3, #NA,
-                     min = 1,
-                     step = 1
-                   ),
                  # Time of Day
                  uiOutput(outputId = "tod")
                  )
@@ -590,6 +581,20 @@ output$id_trk <- renderUI({
     selected = sort(unique(dat()$id))[1:length(unique(dat()$id))]
   )
 })
+# Only retain bursts with a minimum number of relocations
+output$min_burst <- renderUI({
+  validate(
+    need(input$rate_min && input$tol_min, '')
+  )
+  numericInput(
+    inputId = "min_burst",
+    label = "Minimum No. of Relocations per Burst:",
+    value = 3, #NA,
+    min = 1,
+    step = 1
+  )
+})
+
 
 # Create a track: choose columns
 dat <- reactive({
@@ -648,14 +653,19 @@ trk_resamp <- reactive({
   )
   # Multiple IDs selected
   if (length(input$id_trk) > 1) {
-    t_res <- group_by(trk(), id) %>% nest() %>% 
-      mutate(data = map(data, ~ .x %>% 
-                          track_resample(rate = minutes(input$rate_min),
-                                         tolerance = minutes(input$tol_min))))
+    t_res <- trk() %>% track_resample(rate = minutes(input$rate_min), 
+                                      tolerance = minutes(input$tol_min))
+    group_by(t_res, id) %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+      nest()
+    # group_by(trk(), id) %>% nest() %>% 
+    #   mutate(data = map(data, ~ .x %>% 
+    #                       track_resample(rate = minutes(input$rate_min),
+    #                                      tolerance = minutes(input$tol_min))))
   } else {
     # One ID selected
     trk() %>% track_resample(rate = minutes(input$rate_min), 
-                             tolerance = minutes(input$tol_min))
+                             tolerance = minutes(input$tol_min)) %>% 
+      filter_min_n_burst(min_n = input$min_burst)
   }
 })
 
@@ -797,35 +807,6 @@ output$mod_var <- renderUI({
   )
 })
 
-# Filter logarithmized model variables
-# output$log_var <- renderUI({
-#   validate(
-#     need(mod_pre(), '')
-#   )
-#   # Positions of variables not to include in choices
-#   pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_",
-#                                                   "step_id_", "x1_", "x2_",
-#                                                   "y1_", "y2_", "t1_", "t2_"))
-#   # Create options list with "log labels" assigned to model variables
-#   var <- sort(names(mod_pre()))[-pos_excl]
-#   lvar <- vector()
-#   lvar_choices <- vector()
-# 
-#   for (i in 1:length(var)) {
-#     lvar[i] <- paste("log_", var[i], sep = '')
-#     lvar_choices[i] <- paste(lvar[i], " = \"", var[i], "\"", sep = '')
-#   }
-#   lvar_choices <- eval(parse(text = paste("c(", paste(lvar_choices,
-#                                                       collapse = ", "), ")",
-#                                           sep = '')))
-#   
-#   selectizeInput(
-#     inputId = "log_var", 
-#     label = "Select Log Variables:",
-#     choices = lvar_choices,
-#     multiple = TRUE
-#   )
-# })
 # Slider for no. of interaction terms to add
 output$inter_no <- renderUI({
   validate(
@@ -1001,7 +982,7 @@ mod_pre <- reactive({
       if (input$tod == "") {
         set.seed(12345)
         issf_one <- trk_resamp() %>% 
-          filter_min_n_burst(min_n = input$min_burst) %>% 
+          #filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>% 
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env()) %>%
@@ -1017,7 +998,7 @@ mod_pre <- reactive({
         set.seed(12345)
         
         issf_one <- trk_resamp() %>% 
-          filter_min_n_burst(min_n = input$min_burst) %>% 
+          #filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>% 
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env()) %>%
@@ -1060,13 +1041,16 @@ mod <- reactive({
         select(id, m1_sum) %>% unnest %>% as.data.frame()
       
     } else if (input$model == "Integrated Step Selection Function") {
+      validate(
+        need(input$rand_stps, '')
+      )
       set.seed(12345)
       # Fit SSF (Step Selection Function; conditional logistic regression)
       ssf_multi <- trk_resamp() %>% 
         mutate(steps = map(data, steps_by_burst)) %>% 
-        filter(map_int(steps, nrow) > 100) %>% # 100 as option (any number)???
+        #filter(map_int(steps, nrow) > 100) %>% # replaced by filter_min_n_burst in trk_resamp
         mutate(
-          m2 = map(steps, ~ .x %>% random_steps %>% 
+          m2 = map(steps, ~ .x %>% random_steps(n = input$rand_stps) %>% 
                      extract_covariates(env()) %>%
                      # Add renamed land use column ("lu") and convert to factor 
                      mutate(lu = factor(land_use)) %>%
