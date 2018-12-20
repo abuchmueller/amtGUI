@@ -997,54 +997,46 @@ mod_pre <- reactive({
  a larger interval (in min) to keep the current no. of minimum relocations 
  per burst.')
       )
-      set.seed(12345)
-      
-      # wet <- env() == 90
-      # names(wet) <- "wet"
-      
-      #lu_area <- env() == as.numeric(input$lu)
-      #names(lu_area) <- input$lu_name
-      
-      issf_one <- trk_resamp() %>% 
-        filter_min_n_burst(min_n = input$min_burst) %>% 
-        steps_by_burst() %>% 
-        random_steps(n = input$rand_stps) %>% 
-        extract_covariates(env()) %>%
-        mutate(log_sl_ = log(sl_), 
-               cos_ta_ = cos(ta_), 
-               lu = factor(land_use)) %>%
-        #mutate(lu = factor(land_use)) %>%
-        time_of_day(include.crepuscule = input$tod)
-      
-      # mutate loop for raster stack?
-      #for (i in 1:nrow(rhandsontable)) {
-      #  issf_one <- issf_one %>% mutate(lu = factor(input$rhandsontable_column_1_row[i]))  
-      #}
-      
-      issf_one <- issf_one %>% dplyr::select(- land_use)
-      issf_one
+      # Time of day is not selected
+      if (input$tod == "") {
+        set.seed(12345)
+        issf_one <- trk_resamp() %>% 
+          filter_min_n_burst(min_n = input$min_burst) %>% 
+          steps_by_burst() %>% 
+          random_steps(n = input$rand_stps) %>% 
+          extract_covariates(env()) %>%
+          mutate(log_sl_ = log(sl_), 
+                 cos_ta_ = cos(ta_), 
+                 lu = factor(land_use))
+
+        issf_one <- issf_one %>% dplyr::select(- land_use)
+        issf_one
+        
+      } else {
+        # A time of day option is selected 
+        set.seed(12345)
+        
+        issf_one <- trk_resamp() %>% 
+          filter_min_n_burst(min_n = input$min_burst) %>% 
+          steps_by_burst() %>% 
+          random_steps(n = input$rand_stps) %>% 
+          extract_covariates(env()) %>%
+          mutate(log_sl_ = log(sl_), 
+                 cos_ta_ = cos(ta_), 
+                 lu = factor(land_use)) %>%
+          time_of_day(include.crepuscule = input$tod)
+        
+        # mutate loop for raster stack?
+        #for (i in 1:nrow(rhandsontable)) {
+        #  issf_one <- issf_one %>% mutate(lu = factor(input$rhandsontable_column_1_row[i]))  
+        #}
+        
+        issf_one <- issf_one %>% dplyr::select(- land_use)
+        issf_one
+      }
     }
   }
 })
-
-# Add logarithmized model variables to mod_pre
-# mod_pre_log <- reactive({
-#   if (!is.null(input$log_var)) {
-#     for (i in 1:length(input$log_var)) {
-#       # Add logarithmized variable
-#       mod_pre_log <- mod_pre() %>% mutate(lvar = eval(parse(text = paste(
-#         "log(", input$log_var[i], ")", sep = ''))))
-#       # Copy column with unique name
-#       mod_pre_log[[paste("log_", input$log_var[i],
-#                       sep = '')]] <- mod_pre_log[["lvar"]]
-#       # Remove duplicated "lvar" column
-#       mod_pre_log <- mod_pre_log %>% dplyr::select(- lvar)
-#     }
-#     mod_pre_log
-#   } else {
-#     mod_pre()
-#   }
-# })
 
 # Fit model
 mod <- reactive({
