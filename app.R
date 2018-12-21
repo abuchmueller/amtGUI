@@ -856,25 +856,27 @@ output$rand_points <- renderUI({
     step = 1
   )
 })
+# Variable choices for variable and interaction term drop downs
+var_choices <- reactive({
+  # Positions of variables not to include in choices
+  pos_excl <- which(sort(names(mod_pre_var())) %in% c(
+    "case_", "dt_", "x1_", "x2_", "y1_", "y2_", "t1_", "t2_", "burst_", 
+    "step_id_"))
+  sort(names(mod_pre_var()))[-pos_excl]
+})
 # Filter model variables
 output$mod_var <- renderUI({
   validate(
     need(mod_pre_var(), '')
   )
-  # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre_var())) %in% c("case_", "burst_", "dt_",
-                                           "step_id_", "x1_", "x2_",
-                                           "y1_", "y2_", "t1_", "t2_"))
-  
   selectizeInput(
     inputId = "mod_var", 
     label = "Select Variables:",
-    choices = sort(names(mod_pre_var()))[-pos_excl], 
+    choices = var_choices(),
     multiple = TRUE#,
     #selected = sort(names(mod_pre()))[-pos_excl]
   )
 })
-
 # Slider for no. of interaction terms to add
 output$inter_no <- renderUI({
   validate(
@@ -895,15 +897,10 @@ output$inter_1 <- renderUI({
     need(mod_pre(), ''),
     need(input$inter_no >= 1, '')
   )
-  # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                                  "step_id_", "x1_", "x2_", 
-                                                  "y1_", "y2_", "t1_", "t2_"))
-  
   selectizeInput(
     inputId = "inter_1", 
     label = "Create 1st Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -914,15 +911,10 @@ output$inter_2 <- renderUI({
     need(mod_pre(), ''),
     need(input$inter_no >= 2, '')
   )
-  # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                                  "step_id_", "x1_", "x2_", 
-                                                  "y1_", "y2_", "t1_", "t2_"))
-  
   selectizeInput(
     inputId = "inter_2", 
     label = "Create 2nd Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -933,15 +925,10 @@ output$inter_3 <- renderUI({
     need(mod_pre(), ''),
     need(input$inter_no >= 3, '')
   )
-  # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                                  "step_id_", "x1_", "x2_", 
-                                                  "y1_", "y2_", "t1_", "t2_"))
-  
   selectizeInput(
     inputId = "inter_3", 
     label = "Create 3rd Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -952,15 +939,10 @@ output$inter_4 <- renderUI({
     need(mod_pre(), ''),
     need(input$inter_no >= 4, '')
   )
-  # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                                  "step_id_", "x1_", "x2_", 
-                                                  "y1_", "y2_", "t1_", "t2_"))
-  
   selectizeInput(
     inputId = "inter_4", 
     label = "Create 4th Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -971,15 +953,10 @@ output$inter_5 <- renderUI({
     need(mod_pre(), ''),
     need(input$inter_no == 5, '')
   )
-  # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_", 
-                                                  "step_id_", "x1_", "x2_", 
-                                                  "y1_", "y2_", "t1_", "t2_"))
-  
   selectizeInput(
     inputId = "5", 
     label = "Create 5th Interaction:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
   )
@@ -1024,31 +1001,93 @@ mod_pre <- reactive({
       validate(
         need(input$rand_stps, '')
       )
-      # Time of day is not selected
-      if (input$tod == "") {
-        trk_resamp() %>% 
-          mutate(steps = lapply(steps, function(x) {
-            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
-              amt::steps_by_burst() %>% 
-              amt::random_steps(n = input$rand_stps) %>% 
-              amt::extract_covariates(env(), where = "both") %>% 
-              mutate(log_sl_ = log(sl_), 
-                     cos_ta_ = cos(ta_), 
-                     land_use_end = factor(land_use_end))
-          }))
-      } else {
-        # A time of day option is selected 
-        trk_resamp() %>% 
-          mutate(steps = lapply(steps, function(x) {
-            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
-              amt::steps_by_burst() %>% 
-              amt::random_steps(n = input$rand_stps) %>% 
-              amt::extract_covariates(env(), where = "both") %>% 
-              mutate(log_sl_ = log(sl_), 
-                     cos_ta_ = cos(ta_), 
-                     land_use_end = factor(land_use_end)) %>% 
-              time_of_day(include.crepuscule = input$tod)
-          }))
+      # Define data frame for usage below
+      m1 <- trk_resamp()
+      # Test wether chosen minimum no. of relocations per burst is too high 
+      # for some IDs
+      removed_ids <- vector()
+      j = 0
+      for (i in 1:nrow(m1)) {
+        min_burst <- m1$steps[[i]]
+        freq <- table(min_burst["burst_"]) 
+        pos <- which(freq >= 3)
+        if (length(pos) == 0) {
+          j = j + 1
+          m1$steps[[i]] <- tibble()
+          removed_ids[j] <- m1$id[i]
+        }
+      }
+      # All ID(s) meet chosen minimum no. of relocations per burst
+      if (length(removed_ids) == 0) {
+        # Time of day is not selected
+        if (input$tod == "") {
+          m1 %>%
+            mutate(steps = lapply(steps, function(x) {
+              x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+                amt::steps_by_burst() %>% 
+                amt::random_steps(n = input$rand_stps) %>% 
+                amt::extract_covariates(env(), where = "both") %>% 
+                mutate(log_sl_ = log(sl_), 
+                       cos_ta_ = cos(ta_), 
+                       land_use_end = factor(land_use_end))
+            }))
+        } else {
+          # A time of day option is selected 
+          m1 %>% 
+            mutate(steps = lapply(steps, function(x) {
+              x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+                amt::steps_by_burst() %>% 
+                amt::random_steps(n = input$rand_stps) %>% 
+                amt::extract_covariates(env(), where = "both") %>% 
+                mutate(log_sl_ = log(sl_), 
+                       cos_ta_ = cos(ta_), 
+                       land_use_end = factor(land_use_end)) %>% 
+                time_of_day(include.crepuscule = input$tod)
+            }))
+        }
+      } else if (length(removed_ids) > 0) {
+        # Remove ID(s) not meeting chosen minimum no. of relocations per burst
+        showNotification(
+          ui = paste(
+            "The minimum no. of relocations per burst is too high for the 
+            ID(s): ", paste(removed_ids, collapse = ", "), ". Therefore, those 
+            were removed. If you want to retain those ID(s) please choose a 
+            lower value. Alternatively you may choose a lower resampling rate, 
+            i.e., a larger interval (in min) to retain the current no. of 
+            minimum relocations per burst.", sep = ''),
+          type = "warning",
+          duration = NULL
+          )
+          # Time of day is not selected
+          if (input$tod == "") {
+            m1 %>% 
+              # remove IDs not meeting min no. of relocations per burst
+              filter(purrr::map_int(steps, nrow) > 0) %>% # 100
+              mutate(steps = lapply(steps, function(x) {
+                x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+                  amt::steps_by_burst() %>% 
+                  amt::random_steps(n = input$rand_stps) %>% 
+                  amt::extract_covariates(env(), where = "both") %>% 
+                  mutate(log_sl_ = log(sl_), 
+                         cos_ta_ = cos(ta_), 
+                         land_use_end = factor(land_use_end))
+              }))
+          } else {
+            # A time of day option is selected 
+            m1 %>% 
+              # remove IDs not meeting min no. of relocations per burst
+              filter(purrr::map_int(steps, nrow) > 0) %>% # 100
+              mutate(steps = lapply(steps, function(x) {
+                x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+                  amt::steps_by_burst() %>% 
+                  amt::random_steps(n = input$rand_stps) %>% 
+                  amt::extract_covariates(env(), where = "both") %>% 
+                  mutate(log_sl_ = log(sl_), 
+                         cos_ta_ = cos(ta_), 
+                         land_use_end = factor(land_use_end)) %>% 
+                  time_of_day(include.crepuscule = input$tod)
+              }))
+          }  
       }
     }
     
