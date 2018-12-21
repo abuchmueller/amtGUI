@@ -248,39 +248,69 @@ tabItem(tabName = "model",
     column(width = 2, #offset = 1,
            radioButtons(
              inputId = "model",
-             label = h4("Choose a Model:"),
+             label = h4("Choose a Model"),
              choices = c("Resource Selection Function", 
                          "Integrated Step Selection Function",
                          "None"),
              selected = "None"
-           )
-    ),
-    column(width = 2,
+           ),
            # Set number of random steps per relocation (ISSF)
            uiOutput(outputId = "rand_stps"),
            # Set number of random points (RSF)
            uiOutput(outputId = "rand_points")
-           ),
+    ),
     column(width = 3,
+           br(),
+           br(),
            # Select land use area
            #uiOutput(outputId = "lu"),
            # Assign land use covariate name
            #uiOutput(outputId = "lu_name"),
            # Select model variables
-           uiOutput(outputId = "mod_var")
+           uiOutput(outputId = "mod_var"),
+           # Select no. of interaction terms to add
+           uiOutput(outputId = "inter_no")
            # Select logarithmized model variables
            #uiOutput(outputId = "log_var")
            ),
-    column(width = 2,
-           # Select no. of interaction terms to add
-           uiOutput(outputId = "inter_no"),
-           # Select 1st to 5th interaction
-           uiOutput(outputId = "inter_1"),
-           uiOutput(outputId = "inter_2"),
-           uiOutput(outputId = "inter_3"),
-           uiOutput(outputId = "inter_4"),
+    # column(width = 2,
+    #        # Select 1st to 5th interaction
+    #        uiOutput(outputId = "inter_1"),
+    #        uiOutput(outputId = "inter_2"),
+    #        uiOutput(outputId = "inter_3"),
+    #        uiOutput(outputId = "inter_4"),
+    #        uiOutput(outputId = "inter_5")
+    #        )
+    column(width = 1,
+           br(),
+           br(),
+           # Select 1st interaction
+           uiOutput(outputId = "inter_1")
+    ),
+    column(width = 1,
+           br(),
+           br(),
+           # Select 2nd interaction
+           uiOutput(outputId = "inter_2")
+    ),
+    column(width = 1,
+           br(),
+           br(),
+           # Select 3rd interaction
+           uiOutput(outputId = "inter_3")
+    ),
+    column(width = 1,
+           br(),
+           br(),
+           # Select 4th interaction
+           uiOutput(outputId = "inter_4")
+    ),
+    column(width = 1,
+           br(),
+           br(),
+           # Select 5th interaction
            uiOutput(outputId = "inter_5")
-           )
+    )
   ),
   br(), # break
   hr(), # horizontal line not showing for some reason???
@@ -899,7 +929,7 @@ output$inter_1 <- renderUI({
   )
   selectizeInput(
     inputId = "inter_1", 
-    label = "Create 1st Interaction:",
+    label = "1st Interaction:",
     choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
@@ -913,7 +943,7 @@ output$inter_2 <- renderUI({
   )
   selectizeInput(
     inputId = "inter_2", 
-    label = "Create 2nd Interaction:",
+    label = "2nd Interaction:",
     choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
@@ -927,7 +957,7 @@ output$inter_3 <- renderUI({
   )
   selectizeInput(
     inputId = "inter_3", 
-    label = "Create 3rd Interaction:",
+    label = "3rd Interaction:",
     choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
@@ -941,7 +971,7 @@ output$inter_4 <- renderUI({
   )
   selectizeInput(
     inputId = "inter_4", 
-    label = "Create 4th Interaction:",
+    label = "4th Interaction:",
     choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
@@ -955,7 +985,7 @@ output$inter_5 <- renderUI({
   )
   selectizeInput(
     inputId = "5", 
-    label = "Create 5th Interaction:",
+    label = "5th Interaction:",
     choices = var_choices(),
     multiple = TRUE,
     options = list(maxItems = 2)
