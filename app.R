@@ -1029,7 +1029,7 @@ mod_pre <- reactive({
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
-        need(input$rand_stps, '')
+        need(input$rand_stps, 'Please set no. of random steps.')
       )
       # Define data frame for usage below
       m1 <- trk_resamp()
@@ -1134,8 +1134,9 @@ mod_pre <- reactive({
       # Test whether minimum no. of relocations per burst is too high (no 
       # observations left) 
       validate(
-        need(length((trk_resamp() %>% 
-                       filter_min_n_burst(min_n = input$min_burst))$burst_) != 0,
+        need(input$rand_stps, 'Please set no. of random steps.'),
+        need(nrow(trk_resamp() %>% 
+                    filter_min_n_burst(min_n = input$min_burst)) != 0,
 'The minimum no. of relocations per burst is too high, please choose a lower 
  one. Alternatively you may choose a lower resampling rate, i.e., 
  a larger interval (in min) to keep the current no. of minimum relocations 
@@ -1280,6 +1281,7 @@ mod <- reactive({
         mutate(lu = factor(land_use)) %>%
         fit_rsf(case_ ~ lu)
       summary(rsf_one)
+      
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
         need(input$mod_var, 'Please select model variables.')
