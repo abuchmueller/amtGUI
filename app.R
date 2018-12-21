@@ -195,9 +195,7 @@ tabItem(tabName = "track",
              value = NA, #2,
              min = 0,
              step = 1
-           ),
-           # Only retain bursts with a minimum number of relocations
-           uiOutput(outputId = "min_burst")
+           )
     )
   ),
   hr(),
@@ -227,6 +225,8 @@ tabItem(tabName = "track",
 tabItem(tabName = "covariates",
         fluidRow(
           column(width = 4, #offset = 1,
+                 # Only retain bursts with a minimum number of relocations
+                 uiOutput(outputId = "min_burst"),
                  # Time of Day
                  uiOutput(outputId = "tod")
                  )
@@ -581,20 +581,6 @@ output$id_trk <- renderUI({
     selected = sort(unique(dat()$id))[1:length(unique(dat()$id))]
   )
 })
-# Only retain bursts with a minimum number of relocations
-output$min_burst <- renderUI({
-  validate(
-    need(input$rate_min && input$tol_min, '')
-  )
-  numericInput(
-    inputId = "min_burst",
-    label = "Minimum No. of Relocations per Burst:",
-    value = 3, #NA,
-    min = 1,
-    step = 1
-  )
-})
-
 
 # Create a track: choose columns
 dat <- reactive({
@@ -610,24 +596,70 @@ dat <- reactive({
 # Create a track
 trk <- reactive({
     validate(
+      #need(input$x, '')
       need(input$id_trk, "Please select at least one ID.")
     )
+  # Multiple IDs selected (individual models)
+  if (length(input$id_trk) > 1) {
+    if (input$epsg_csv == input$epsg_trk) {
+      # Assign known EPSG Code to tracking data
+      track_multi <- dat() %>% nest(-id) %>% 
+        mutate(track = lapply(data, function(d) {
+          amt::make_track(d, x, y, ts, crs = sp::CRS(paste(
+            "+init=epsg:", input$epsg_csv, sep = '')))
+        }))
+      # Subset filtered ID(s)
+      track_multi <- track_multi[track_multi$id %in% input$id_trk, ]
+      track_multi
+    } else {
+      # Transform CRS of track
+      trk_multi_tr <- dat() %>% nest(-id) %>% 
+        mutate(track = lapply(data, function(d) {
+          amt::make_track(d, x, y, ts, crs = sp::CRS(paste(
+            "+init=epsg:", input$epsg_csv, sep = ''))) %>% 
+            amt::transform_coords(sp::CRS(paste(
+              "+init=epsg:", input$epsg_trk, sep = '')))
+        }))
+      # Subset filtered ID(s)
+      trk_multi_tr <- trk_multi_tr[trk_multi_tr$id %in% input$id_trk, ]
+      trk_multi_tr
+    }
+    
+    
+  } else if (length(input$id_trk) == 1) {
+    # One ID selected
     # Assign known EPSG Code to tracking data
-    track <- make_track(dat(), x, y, ts, id = id,
+    track_one <- make_track(dat(), x, y, ts, id = id,
                         crs = sp::CRS(paste("+init=epsg:", input$epsg_csv, 
                                             sep = ''))
     )
     # Subset filtered ID(s)
-    track <- track[track$id %in% input$id_trk, ]
+    track_one <- track_one[track_one$id %in% input$id_trk, ]
     
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
-      track
+      track_one
     } else {
-      transform_coords(track, sp::CRS(paste("+init=epsg:", 
+      transform_coords(track_one, sp::CRS(paste("+init=epsg:", 
                                             input$epsg_trk, sep = ''))
       )
     }
+  } #else {
+    # No ID selected (one model for all animals)
+    # Assign known EPSG Code to tracking data
+  #   track <- make_track(dat(), x, y, ts,
+  #                       crs = sp::CRS(paste("+init=epsg:", input$epsg_csv, 
+  #                                           sep = ''))
+  #   )
+  #   # Transform CRS of track
+  #   if (input$epsg_csv == input$epsg_trk) {
+  #     track
+  #   } else {
+  #     transform_coords(track, sp::CRS(paste("+init=epsg:", 
+  #                                           input$epsg_trk, sep = ''))
+  #     )
+  #   }
+  # }
 })
 
 # Summarize sampling rate
@@ -637,8 +669,10 @@ samp_rate <- reactive({
   )
   # Multiple IDs selected
   if (length(input$id_trk) > 1) {
-    trk_multi <- group_by(trk(), id) %>% nest()
-    map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
+    # trk_multi <- group_by(trk(), id) %>% nest()
+    # map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
+    trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>% 
+      select(id, sr) %>% unnest
   } else {
     # One ID selected
     summarize_sampling_rate(trk()) %>% as.data.frame()
@@ -653,19 +687,19 @@ trk_resamp <- reactive({
   )
   # Multiple IDs selected
   if (length(input$id_trk) > 1) {
-    t_res <- group_by(trk(), id) %>% track_resample(
-      rate = minutes(input$rate_min), tolerance = minutes(input$tol_min))
-    t_res %>% filter_min_n_burst(min_n = input$min_burst) %>% 
-      nest()
-    # group_by(trk(), id) %>% nest() %>% 
+    trk() %>% 
+      mutate(steps = map(track, function(x) {
+        x %>% amt::track_resample(rate = minutes(10), tolerance = seconds(120)) 
+      }))
+    # group_by(trk(), id) %>% nest() %>%
     #   mutate(data = map(data, ~ .x %>% 
     #                       track_resample(rate = minutes(input$rate_min),
     #                                      tolerance = minutes(input$tol_min))))
+    
   } else {
     # One ID selected
     trk() %>% track_resample(rate = minutes(input$rate_min), 
-                             tolerance = minutes(input$tol_min)) %>% 
-      filter_min_n_burst(min_n = input$min_burst)
+                             tolerance = minutes(input$tol_min))
   }
 })
 
@@ -673,18 +707,25 @@ trk_resamp <- reactive({
 trk_df <- reactive({
   # Before resampling
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
-    trk()
+    # Multiple IDs selected
+    if (length(input$id_trk) > 1) {
+      trk() %>% select(id, track) %>% unnest
+    } else {
+      # One ID selected
+      trk()[, c("id", "x_", "y_", "t_")]
+    }
   } else {
     # Resampled track  
     # Multiple IDs selected
     if (length(input$id_trk) > 1) {
       # Convert back to data frame for illustration
-      trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
+      #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
+      trk_resamp_unnested_df <- trk_resamp() %>% select(id, steps) %>% unnest
       # Swap columns
-      trk_resamp_unnested_df[, c("x_", "y_", "t_", "id", "burst_")]
+      #trk_resamp_unnested_df[, c("x_", "y_", "t_", "id", "burst_")]
     } else {
       # One ID selected
-      trk_resamp()
+      trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
     }
   }
 }) 
@@ -694,8 +735,8 @@ output$contents_trk <- DT::renderDataTable({
   validate(
     need(input$x, 'Please assign location-long.'),
     need(input$y, 'Please assign location-lat.'),
-    need(input$ts, 'Please assign timestamp.'),
-    need(input$id, 'Please assign ID.')
+    need(input$ts, 'Please assign timestamp.')#,
+    #need(input$id, 'Please assign ID.')
   )
   if (input$display_trk == "Data Frame") {
     DT::datatable(trk_df(),
@@ -712,8 +753,8 @@ output$summary_trk <- renderPrint({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, ''),
-    need(input$id, '')
+    need(input$ts, '')#,
+    #need(input$id, '')
   )
   if (input$display_trk == "Summary") {
     summary(object = trk_df())
@@ -730,14 +771,28 @@ output$samp_rate_head <- renderText({
 
 # Summarize sampling rate (Output)
 output$summary_samp_rate <- DT::renderDataTable({
-  validate(
-    need(input$id_trk, '')
-  )
-  # Exclude column "unit" (min)
-  DT::datatable(samp_rate()[, -9] %>% round(2),
-                rownames = FALSE,
-                options = list(searching = FALSE, paging = FALSE)
-  )
+  # validate(
+  #   need(input$id_trk, '')
+  # )
+  
+  # Multiple IDs selected
+  if (length(input$id_trk) > 1) {
+    # Exclude column "unit" (min)
+    sr <- samp_rate()[, -c(1, 10)] %>% round(2)
+    # Add id column
+    sr <- cbind(samp_rate()[, 1], sr)
+    DT::datatable(sr, #samp_rate()[, -c(1, 10)] %>% round(2),
+                  rownames = FALSE,
+                  options = list(searching = FALSE, paging = FALSE)
+    )
+  } else {
+    # One ID selected
+    # Exclude column "unit" (min)
+    DT::datatable(samp_rate()[, -9] %>% round(2),
+                  rownames = FALSE,
+                  options = list(searching = FALSE, paging = FALSE)
+    )
+  }
 })
 
 
@@ -745,6 +800,19 @@ output$summary_samp_rate <- DT::renderDataTable({
 
 # Add Additional Covariates -----------------------------------------------
 
+# Only retain bursts with a minimum number of relocations
+output$min_burst <- renderUI({
+  validate(
+    need(input$rate_min && input$tol_min, '')
+  )
+  numericInput(
+    inputId = "min_burst",
+    label = "Minimum No. of Relocations per Burst:",
+    value = 3, #NA,
+    min = 1,
+    step = 1
+  )
+})
 # Time of Day
 output$tod <- renderUI({
   selectInput(
@@ -791,17 +859,17 @@ output$rand_points <- renderUI({
 # Filter model variables
 output$mod_var <- renderUI({
   validate(
-    need(mod_pre(), '')
+    need(mod_pre_var(), '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre())) %in% c("case_", "burst_", "dt_",
+  pos_excl <- which(sort(names(mod_pre_var())) %in% c("case_", "burst_", "dt_",
                                            "step_id_", "x1_", "x2_",
                                            "y1_", "y2_", "t1_", "t2_"))
   
   selectizeInput(
     inputId = "mod_var", 
     label = "Select Variables:",
-    choices = sort(names(mod_pre()))[-pos_excl], 
+    choices = sort(names(mod_pre_var()))[-pos_excl], 
     multiple = TRUE#,
     #selected = sort(names(mod_pre()))[-pos_excl]
   )
@@ -949,17 +1017,43 @@ mod_pre <- reactive({
   # Multiple IDs selected (individual models)
   if (length(input$id_trk) > 1) {
     
-    # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
+      return()
       
     } else if (input$model == "Integrated Step Selection Function") {
-      
+      validate(
+        need(input$rand_stps, '')
+      )
+      # Time of day is not selected
+      if (input$tod == "") {
+        trk_resamp() %>% 
+          mutate(steps = lapply(steps, function(x) {
+            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+              amt::steps_by_burst() %>% 
+              amt::random_steps(n = input$rand_stps) %>% 
+              amt::extract_covariates(env(), where = "both") %>% 
+              mutate(log_sl_ = log(sl_), 
+                     cos_ta_ = cos(ta_), 
+                     land_use_end = factor(land_use_end))
+          }))
+      } else {
+        # A time of day option is selected 
+        trk_resamp() %>% 
+          mutate(steps = lapply(steps, function(x) {
+            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+              amt::steps_by_burst() %>% 
+              amt::random_steps(n = input$rand_stps) %>% 
+              amt::extract_covariates(env(), where = "both") %>% 
+              mutate(log_sl_ = log(sl_), 
+                     cos_ta_ = cos(ta_), 
+                     land_use_end = factor(land_use_end)) %>% 
+              time_of_day(include.crepuscule = input$tod)
+          }))
+      }
     }
-    
     
   } else {
     # One ID selected (single model)
-    # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       # set.seed(12345)
       # rsf_one <- trk_resamp() %>% random_points() %>% 
@@ -982,23 +1076,20 @@ mod_pre <- reactive({
       if (input$tod == "") {
         set.seed(12345)
         issf_one <- trk_resamp() %>% 
-          #filter_min_n_burst(min_n = input$min_burst) %>% 
-          steps_by_burst() %>% 
+          filter_min_n_burst(min_n = input$min_burst) %>% 
+          steps_by_burst() %>%
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env()) %>%
           mutate(log_sl_ = log(sl_), 
                  cos_ta_ = cos(ta_), 
                  lu = factor(land_use))
-
-        issf_one <- issf_one %>% dplyr::select(- land_use)
         issf_one
         
       } else {
         # A time of day option is selected 
         set.seed(12345)
-        
         issf_one <- trk_resamp() %>% 
-          #filter_min_n_burst(min_n = input$min_burst) %>% 
+          filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>% 
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env()) %>%
@@ -1011,13 +1102,66 @@ mod_pre <- reactive({
         #for (i in 1:nrow(rhandsontable)) {
         #  issf_one <- issf_one %>% mutate(lu = factor(input$rhandsontable_column_1_row[i]))  
         #}
-        
-        issf_one <- issf_one %>% dplyr::select(- land_use)
         issf_one
       }
     }
   }
 })
+
+# Get variable names
+mod_pre_var <- reactive({
+  # Multiple IDs selected (individual models)
+  if (length(input$id_trk) > 1) {
+    if (input$model == "Resource Selection Function") {
+
+    } else if (input$model == "Integrated Step Selection Function") {
+      mod_pre()$steps[[1]]
+    }
+  } else {
+    # One ID selected (single model)
+    if (input$model == "Resource Selection Function") {
+
+    } else if (input$model == "Integrated Step Selection Function") {
+      mod_pre()
+    }
+  }
+})
+
+# Create formula with variables for model building below
+mod_all_var <- reactive({
+  validate(
+    need(input$mod_var, 'Please select model variables.')
+  )
+  # Model variables
+  p_var <- paste(input$mod_var, collapse = " + ")
+
+  # Interaction terms
+  p_inter_1 <- ifelse(length(input$inter_1) == 2, 
+                      yes = paste(" + ", input$inter_1[1], ":", 
+                                  input$inter_1[2], sep = ''), 
+                      no = '')
+  p_inter_2 <- ifelse(length(input$inter_2) == 2, 
+                      yes = paste(" + ", input$inter_2[1], ":", 
+                                  input$inter_2[2], sep = ''), 
+                      no = '')
+  p_inter_3 <- ifelse(length(input$inter_3) == 2, 
+                      yes = paste(" + ", input$inter_3[1], ":", 
+                                  input$inter_3[2], sep = ''), 
+                      no = '')
+  p_inter_4 <- ifelse(length(input$inter_4) == 2, 
+                      yes = paste(" + ", input$inter_4[1], ":", 
+                                  input$inter_4[2], sep = ''), 
+                      no = '')
+  p_inter_5 <- ifelse(length(input$inter_5) == 2, 
+                      yes = paste(" + ", input$inter_5[1], ":", 
+                                  input$inter_5[2], sep = ''), 
+                      no = '')
+  # Concatenate all variable types
+  p_all_var <- paste(p_var, p_inter_1, p_inter_2, p_inter_3, 
+                     p_inter_4, p_inter_5, sep = '')
+  p_all_var
+})
+
 
 # Fit model
 mod <- reactive({
@@ -1042,25 +1186,19 @@ mod <- reactive({
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
-        need(input$rand_stps, '')
+        need(input$mod_var, 'Please select model variables.')
       )
       set.seed(12345)
       # Fit SSF (Step Selection Function; conditional logistic regression)
-      ssf_multi <- trk_resamp() %>% 
-        mutate(steps = map(data, steps_by_burst)) %>% 
-        #filter(map_int(steps, nrow) > 100) %>% # replaced by filter_min_n_burst in trk_resamp
+      issf_multi_fit <- mod_pre() %>%
         mutate(
-          m2 = map(steps, ~ .x %>% random_steps(n = input$rand_stps) %>% 
-                     extract_covariates(env()) %>%
-                     # Add renamed land use column ("lu") and convert to factor 
-                     mutate(lu = factor(land_use)) %>%
-                     fit_ssf(case_ ~ lu + strata(step_id_))))
-      
-      # Data frame with coefficients
-      ssf_multi %>% mutate(m2 = map(ssf_multi$m2, ~ broom::tidy(.$model))) %>% 
-        select(id, m2) %>% unnest %>% as.data.frame()
-    } 
-    
+          fit = map(steps, ~ amt::fit_issf(
+            ., as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"
+              )))))
+      # Model output as data frame 
+      issf_multi_fit %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
+        select(id, coef) %>% unnest() %>% as.data.frame()
+  }
     
   } else {
     # One ID selected (single model)
@@ -1079,36 +1217,10 @@ mod <- reactive({
       )
       set.seed(12345)
       
-      # Model variables
-      p_var <- paste(input$mod_var, collapse = " + ")
-      
-      # Interaction terms
-      p_inter_1 <- ifelse(length(input$inter_1) == 2, 
-                          yes = paste(" + ", input$inter_1[1], ":", 
-                                      input$inter_1[2], sep = ''), 
-                          no = '')
-      p_inter_2 <- ifelse(length(input$inter_2) == 2, 
-                          yes = paste(" + ", input$inter_2[1], ":", 
-                                      input$inter_2[2], sep = ''), 
-                          no = '')
-      p_inter_3 <- ifelse(length(input$inter_3) == 2, 
-                          yes = paste(" + ", input$inter_3[1], ":", 
-                                      input$inter_3[2], sep = ''), 
-                          no = '')
-      p_inter_4 <- ifelse(length(input$inter_4) == 2, 
-                          yes = paste(" + ", input$inter_4[1], ":", 
-                                      input$inter_4[2], sep = ''), 
-                          no = '')
-      p_inter_5 <- ifelse(length(input$inter_5) == 2, 
-                          yes = paste(" + ", input$inter_5[1], ":", 
-                                      input$inter_5[2], sep = ''), 
-                          no = '')
-      # Concatenate all variable types
-      p_all_var <- paste(p_var, p_inter_1, p_inter_2, p_inter_3, 
-                         p_inter_4, p_inter_5, sep = '')
-      
       issf_one_fit <- mod_pre() %>% 
-        fit_issf(as.formula(paste("case_ ~", p_all_var, "+ strata(step_id_)")))
+        fit_issf(
+          as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"))
+          )
       summary(issf_one_fit)
     }
   }
