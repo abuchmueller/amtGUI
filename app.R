@@ -1124,11 +1124,39 @@ mod_pre <- reactive({
   } else {
     # One ID selected (single model)
     if (input$model == "Resource Selection Function") {
-      # set.seed(12345)
-      # rsf_one <- trk_resamp() %>% random_points() %>% 
-      #   extract_covariates(env()) %>%
-      #   # Add renamed land use column ("lu") and convert to factor 
-      #   mutate(lu = factor(land_use))
+      validate(
+        need(input$rand_points, 'Please set no. of random points.'),
+        need(nrow(trk_resamp() %>% 
+                    filter_min_n_burst(min_n = input$min_burst)) != 0,
+ 'The minimum no. of relocations per burst is too high, please choose a lower 
+ one. Alternatively you may choose a lower resampling rate, i.e., 
+ a larger interval (in min) to keep the current no. of minimum relocations 
+ per burst.')
+      )
+      # Time of day is not selected
+      if (input$tod == "") {
+        set.seed(12345)
+        trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+          random_points(n = input$rand_points) %>% 
+          extract_covariates(env()) %>%
+          # Add renamed land use column ("lu") and convert to factor 
+          mutate(land_use = factor(land_use))
+      } else {
+        # A time of day option is selected
+        set.seed(12345)
+        
+        trk_tod <- trk_resamp() %>%
+          filter_min_n_burst(min_n = input$min_burst) %>% 
+          time_of_day(include.crepuscule = input$tod)
+        
+        rsf_one <- trk_resamp() %>%
+          filter_min_n_burst(min_n = input$min_burst) %>%
+          random_points(n = input$rand_points) %>%
+          extract_covariates(env()) %>% 
+          mutate(land_use = factor(land_use))
+        # More appropriate solution???
+        cbind(rsf_one, trk_tod[, c("t_", "burst_", "tod_")])
+      }
       
     } else if (input$model == "Integrated Step Selection Function") {
       # Test whether minimum no. of relocations per burst is too high (no 
@@ -1190,7 +1218,7 @@ mod_pre_var <- reactive({
   } else {
     # One ID selected (single model)
     if (input$model == "Resource Selection Function") {
-
+      mod_pre()
     } else if (input$model == "Integrated Step Selection Function") {
       mod_pre()
     }
@@ -1275,11 +1303,8 @@ mod <- reactive({
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
-      rsf_one <- trk_resamp() %>% random_points(n = input$rand_points) %>% 
-        extract_covariates(env()) %>%
-        # Add renamed land use column ("lu") and convert to factor 
-        mutate(lu = factor(land_use)) %>%
-        fit_rsf(case_ ~ lu)
+      rsf_one <- mod_pre() %>% 
+        fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
       summary(rsf_one)
       
     } else if (input$model == "Integrated Step Selection Function") {
