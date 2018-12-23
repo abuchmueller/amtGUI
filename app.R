@@ -257,7 +257,9 @@ tabItem(tabName = "model",
            # Set number of random steps per relocation (ISSF)
            uiOutput(outputId = "rand_stps"),
            # Set number of random points (RSF)
-           uiOutput(outputId = "rand_points")
+           uiOutput(outputId = "rand_points"),
+           # Fit model button
+           actionButton("fit_button", "Fit Model")
     ),
     column(width = 3,
            br(),
@@ -272,7 +274,7 @@ tabItem(tabName = "model",
            uiOutput(outputId = "inter_no")
            # Select logarithmized model variables
            #uiOutput(outputId = "log_var")
-           ),
+    ),
     # column(width = 2,
     #        # Select 1st to 5th interaction
     #        uiOutput(outputId = "inter_1"),
@@ -1290,6 +1292,11 @@ mod_all_var <- reactive({
   paste(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5, sep = '')
 })
 
+# Fit button (to start model fitting)
+fit <- eventReactive(input$fit_button, {
+  # Run model fitting part below
+  mod()
+})
 
 # Fit model
 mod <- reactive({
@@ -1354,7 +1361,8 @@ mod <- reactive({
 
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
-  DT::datatable(mod(),
+  # Dependent on fit button above
+  DT::datatable(fit(),
                 rownames = FALSE,
                 options = list(searching = FALSE, paging = FALSE))
 })
