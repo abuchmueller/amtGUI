@@ -111,8 +111,8 @@ ui <- dashboardPage(skin = "green",
               # Input: Select EPSG Code
               selectInput(
                 inputId = "epsg_csv",
-                label = "Assign EPSG Code",
-                choices = na.omit(epsg_data$code), #rgdal::make_EPSG()["code"]
+                label = "Assign EPSG Code:",
+                choices = sort(na.omit(epsg_data$code)), #rgdal::make_EPSG()["code"]
                 selected = 4326
               )
             ),
@@ -153,7 +153,7 @@ ui <- dashboardPage(skin = "green",
                       uiOutput(outputId = "epsg_env")
                     ),
                     mainPanel = mainPanel(
-                      verbatimTextOutput(outputId = "contents_env")
+                      DT::dataTableOutput(outputId = "contents_env")
                     )
                   )
               )),
@@ -442,8 +442,11 @@ env <- reactive({
             "None" = return()
     )
   } else if (values_env$upload_state == 'uploaded') {
+    raster_up <- raster::raster(x = input$dataset_env$datapath)
     # Rename uploaded TIF for usage in model building
-    names(raster::raster(x = input$dataset_env$datapath)) <- "land_use"
+    names(raster_up) <- "land_use"
+    raster_up
+    # names(raster::raster(x = input$dataset_env$datapath)) <- "land_use"
   } else if (values_env$upload_state == 'reset') {
     switch (input$ex_data_env,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
@@ -459,18 +462,18 @@ epsg_env_detected <- reactive({
   env_prj4 <- data.frame("prj4" = raster::projection(env()),
                               stringsAsFactors = FALSE)
   detect_epsg <- dplyr::left_join(env_prj4, epsg_data, by = "prj4")
-  detect_epsg$code[1] # multiple matches possible choose the first one
+  # Multiple matches possible
+  detect_epsg %>% select("Detected EPSG Code(s)" = code, "Description" = note)
   })
 # EPSG Code TIF
 output$epsg_env <- renderUI({
   selectInput(
     inputId = "epsg_env",
-    # Add general info and for case where detection isn't possible and default 
-    # will be shown (epsg_csv)
-    label = "Detected EPSG Code", 
-    choices = na.omit(epsg_data$code),
+    label = "Assign EPSG Code:", 
+    choices = sort(na.omit(epsg_data$code)),
     selected = ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
-                      yes = epsg_env_detected(),
+                      # Multiple matches possible select 1st one by default
+                      yes = epsg_env_detected()[1, "Detected EPSG Code(s)"],
                       no = input$epsg_csv
                       )
 )
@@ -481,14 +484,18 @@ output$epsg_env <- renderUI({
 # ?????????
 
 
-# Display data currently not working as it has more than 2 dimensions
-# Equivalent of View(df) for shiny???
-output$contents_env <- reactive({
+# Data frame of detected EPSG codes
+output$contents_env <- DT::renderDataTable({
   validate(
-    need(env(), ''),
-    need(input$epsg_trk, '')
+    need(env(), 'Please upload an environmental data file.'),
+    need(epsg_env_detected(), 'No EPSG code detected from uploaded file.')
   )
-  raster::projection(env()) # to test if the transformation worked (testing only)
+  DT::datatable(epsg_env_detected(),
+                rownames = FALSE,
+                options = list(searching = FALSE, paging = FALSE,
+                columnDefs = list(list(className = 'dt-left', 
+                                       targets = 0:1)))
+                )
 })
 
 
@@ -748,10 +755,12 @@ output$contents_trk <- DT::renderDataTable({
   if (input$display_trk == "Data Frame") {
     DT::datatable(trk_df(),
                   rownames = FALSE,
-                  options = list(
-                    lengthMenu = list(c(5, 10, 20, 50, 100),
-                                      c('5', '10', '20', '50', '100')),
-                    pageLength = 10))
+                  options = list(searching = FALSE,
+                                 lengthMenu = list(
+                                   c(5, 10, 20, 50, 100),
+                                   c('5', '10', '20', '50', '100')),
+                                 pageLength = 10)
+                  )
   }
 })
 
