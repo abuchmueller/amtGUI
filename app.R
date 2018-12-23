@@ -601,28 +601,55 @@ output$id_trk <- renderUI({
   )
 })
 
-# Create a track: choose columns
+# Create a track: select relevant columns and omit NAs
 dat <- reactive({
   validate(
     need(csvInput(), '')
   )
-  # Geometrically subset raster and omit NAs in subset
   csvInput() %>% 
   select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
   na.omit()
 })
 
+# Create a track: select relevant columns and omit NAs (excluding ID)
+dat_excl_id <- reactive({
+  validate(
+    need(csvInput(), '')
+  )
+  csvInput() %>% 
+    select(x = input$x, y = input$y, ts = input$ts) %>%  
+    na.omit()
+})
+
 # Create a track
 trk <- reactive({
     validate(
-      #need(input$x, '')
-      need(input$id_trk, "Please select at least one ID.")
+      need(input$x, ''),
+      need(input$y, ''),
+      need(input$ts, '')
+      #need(input$id_trk, "Please select at least one ID.")
     )
-  # Multiple IDs selected (individual models)
-  if (length(input$id_trk) > 1) {
+  
+  # No ID selected (one model for all animals)
+  if (input$id == '') {
+    # Assign known EPSG Code to tracking data
+    track <- make_track(dat_excl_id(), x, y, ts,
+                        crs = sp::CRS(paste("+init=epsg:", input$epsg_csv,
+                                            sep = ''))
+    )
+    # Transform CRS of track
+    if (input$epsg_csv == input$epsg_trk) {
+      track
+    } else {
+      transform_coords(track, sp::CRS(paste("+init=epsg:",
+                                            input$epsg_trk, sep = ''))
+      )
+    }
+  } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    # Multiple IDs selected (individual models)
     if (input$epsg_csv == input$epsg_trk) {
       # Assign known EPSG Code to tracking data
-      track_multi <- dat() %>% nest(-id) %>% 
+      track_multi <- dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste(
             "+init=epsg:", input$epsg_csv, sep = '')))
@@ -631,68 +658,93 @@ trk <- reactive({
       track_multi[track_multi$id %in% input$id_trk, ]
     } else {
       # Transform CRS of track
-      trk_multi_tr <- dat() %>% nest(-id) %>% 
+      trk_multi_tr <- dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste(
-            "+init=epsg:", input$epsg_csv, sep = ''))) %>% 
+            "+init=epsg:", input$epsg_csv, sep = ''))) %>%
             amt::transform_coords(sp::CRS(paste(
               "+init=epsg:", input$epsg_trk, sep = '')))
         }))
       # Subset filtered ID(s)
       trk_multi_tr[trk_multi_tr$id %in% input$id_trk, ]
     }
-    
-    
-  } else if (length(input$id_trk) == 1) {
+  } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
     # One ID selected
     # Assign known EPSG Code to tracking data
     track_one <- make_track(dat(), x, y, ts, id = id,
-                        crs = sp::CRS(paste("+init=epsg:", input$epsg_csv, 
+                        crs = sp::CRS(paste("+init=epsg:", input$epsg_csv,
                                             sep = ''))
     )
     # Subset filtered ID(s)
     track_one <- track_one[track_one$id %in% input$id_trk, ]
-    
+
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
       track_one
     } else {
-      transform_coords(track_one, sp::CRS(paste("+init=epsg:", 
+      transform_coords(track_one, sp::CRS(paste("+init=epsg:",
                                             input$epsg_trk, sep = ''))
       )
     }
-  } #else {
-    # No ID selected (one model for all animals)
-    # Assign known EPSG Code to tracking data
-  #   track <- make_track(dat(), x, y, ts,
-  #                       crs = sp::CRS(paste("+init=epsg:", input$epsg_csv, 
-  #                                           sep = ''))
-  #   )
-  #   # Transform CRS of track
-  #   if (input$epsg_csv == input$epsg_trk) {
-  #     track
-  #   } else {
-  #     transform_coords(track, sp::CRS(paste("+init=epsg:", 
-  #                                           input$epsg_trk, sep = ''))
-  #     )
-  #   }
-  # }
+  }
 })
 
 # Summarize sampling rate
 samp_rate <- reactive({
   validate(
-    need(input$id_trk, '')
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+    # need(input$id_trk, '')
   )
   # Multiple IDs selected
-  if (length(input$id_trk) > 1) {
-    # trk_multi <- group_by(trk(), id) %>% nest()
-    # map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
-    trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>% 
-      select(id, sr) %>% unnest
+ if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+   # trk_multi <- group_by(trk(), id) %>% nest()
+   # map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
+   trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>%
+     select(id, sr) %>% unnest
+ } else {
+    # One/ no ID selected
+    summarize_sampling_rate(trk()) %>% as.data.frame()
+ }
+})
+
+# Show head line for sampling rate (Output)
+output$samp_rate_head <- renderText({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')#,
+    #need(input$id, '')
+  )
+  "Summary of Sampling Rate (in min)"
+})
+
+# Summarize sampling rate (Output)
+output$summary_samp_rate <- DT::renderDataTable({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')#,
+    #need(input$id, '')
+  )
+  # Multiple IDs selected
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    # Exclude column "unit" (min)
+    sr <- samp_rate()[, -c(1, 10)] %>% round(2)
+    # Add id column
+    sr <- cbind(samp_rate()[, 1], sr)
+    DT::datatable(sr, #samp_rate()[, -c(1, 10)] %>% round(2),
+                  rownames = FALSE,
+                  options = list(searching = FALSE, paging = FALSE)
+    )
   } else {
     # One ID selected
-    summarize_sampling_rate(trk()) %>% as.data.frame()
+    # Exclude column "unit" (min)
+    DT::datatable(samp_rate()[, -9] %>% round(2),
+                  rownames = FALSE,
+                  options = list(searching = FALSE, paging = FALSE)
+    )
   }
 })
 
@@ -703,19 +755,19 @@ trk_resamp <- reactive({
     need(input$tol_min, '')
   )
   # Multiple IDs selected
-  if (length(input$id_trk) > 1) {
-    trk() %>% 
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    trk() %>%
       mutate(track = map(track, function(x) {
-        x %>% amt::track_resample(rate = minutes(10), tolerance = seconds(120)) 
+        x %>% amt::track_resample(rate = minutes(10), tolerance = seconds(120))
       }))
     # group_by(trk(), id) %>% nest() %>%
-    #   mutate(data = map(data, ~ .x %>% 
+    #   mutate(data = map(data, ~ .x %>%
     #                       track_resample(rate = minutes(input$rate_min),
     #                                      tolerance = minutes(input$tol_min))))
-    
+
   } else {
-    # One ID selected
-    trk() %>% track_resample(rate = minutes(input$rate_min), 
+    # One/ no ID selected
+    trk() %>% track_resample(rate = minutes(input$rate_min),
                              tolerance = minutes(input$tol_min))
   }
 })
@@ -725,23 +777,32 @@ trk_df <- reactive({
   # Before resampling
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
     # Multiple IDs selected
-    if (length(input$id_trk) > 1) {
+    if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
       trk() %>% select(id, track) %>% unnest
-    } else {
+    } else if (ifelse(input$id == '', yes = 0, 
+                      no = length(input$id_trk)) == 1) {
       # One ID selected
+      # Swap columns for uniformity
       trk()[, c("id", "x_", "y_", "t_")]
+    } else {
+      # No ID selected
+      trk()
     }
   } else {
-    # Resampled track  
+    # Resampled track
     # Multiple IDs selected
-    if (length(input$id_trk) > 1) {
+    if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
       # Convert back to data frame for illustration
-      #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
-    } else {
+      #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
+    } else if (ifelse(input$id == '', yes = 0, 
+                      no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
+    } else {
+      # No ID selected
+      trk_resamp()
     }
   }
 }) 
@@ -778,42 +839,6 @@ output$summary_trk <- renderPrint({
     summary(object = trk_df())
   }
 })
-
-# Show head line for sampling rate (Output)
-output$samp_rate_head <- renderText({
-  validate(
-    need(input$id_trk, '')
-  )
-  "Summary of Sampling Rate (in min)"
-})
-
-# Summarize sampling rate (Output)
-output$summary_samp_rate <- DT::renderDataTable({
-  # validate(
-  #   need(input$id_trk, '')
-  # )
-  
-  # Multiple IDs selected
-  if (length(input$id_trk) > 1) {
-    # Exclude column "unit" (min)
-    sr <- samp_rate()[, -c(1, 10)] %>% round(2)
-    # Add id column
-    sr <- cbind(samp_rate()[, 1], sr)
-    DT::datatable(sr, #samp_rate()[, -c(1, 10)] %>% round(2),
-                  rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE)
-    )
-  } else {
-    # One ID selected
-    # Exclude column "unit" (min)
-    DT::datatable(samp_rate()[, -9] %>% round(2),
-                  rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE)
-    )
-  }
-})
-
-
 
 
 # Add Additional Covariates -----------------------------------------------
@@ -1361,6 +1386,9 @@ mod <- reactive({
 
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
+  validate(
+    need(input$model != "None", '')
+  )
   # Dependent on fit button above
   DT::datatable(fit(),
                 rownames = FALSE,
