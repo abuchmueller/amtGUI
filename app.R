@@ -316,8 +316,7 @@ tabItem(tabName = "model",
   hr(), # horizontal line not showing for some reason???
   fluidRow(
     column(width = 5,
-        verbatimTextOutput(outputId = "contents_mod"),
-        DT::dataTableOutput(outputId = "mod_df")
+        DT::dataTableOutput(outputId = "contents_mod")
         #plotOutput(outputId = "mod_plot")
     )
   )
@@ -1314,7 +1313,7 @@ mod <- reactive({
           fit = map(steps, ~ amt::fit_issf(
             ., as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"
               )))))
-      # Model output as data frame 
+      # Data frame with coefficients
       issf_multi_fit %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
         select(id, coef) %>% unnest() %>% as.data.frame()
   }
@@ -1324,39 +1323,28 @@ mod <- reactive({
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
-      rsf_one <- mod_pre() %>% 
+      rsf_one_fit <- mod_pre() %>% 
         fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
-      summary(rsf_one)
+      # Data frame with coefficients
+      broom::tidy(rsf_one_fit$model) %>% as.data.frame()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
         need(input$mod_var, 'Please select model variables.')
       )
       set.seed(12345)
-      
       issf_one_fit <- mod_pre() %>% 
         fit_issf(
           as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"))
           )
-      summary(issf_one_fit)
+      # Data frame with coefficients
+      broom::tidy(issf_one_fit$model) %>% as.data.frame()
     }
   }
 })
 
-# Output model fit (one ID only)
-output$contents_mod <- renderPrint({
-  validate(
-    # For one ID only
-    need(length(input$id_trk) == 1, '')
-  )
-  mod()
-})
-# Output data frame of coefficients (multiple IDs only)
-output$mod_df <- DT::renderDataTable({
-  validate(
-    # For multiple IDs only
-    need(length(input$id_trk) > 1, '')
-  )
+# Output data frame with coefficients
+output$contents_mod <- DT::renderDataTable({
   DT::datatable(mod(),
                 rownames = FALSE,
                 options = list(searching = FALSE, paging = FALSE))
