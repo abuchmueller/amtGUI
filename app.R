@@ -639,8 +639,7 @@ trk <- reactive({
             "+init=epsg:", input$epsg_csv, sep = '')))
         }))
       # Subset filtered ID(s)
-      track_multi <- track_multi[track_multi$id %in% input$id_trk, ]
-      track_multi
+      track_multi[track_multi$id %in% input$id_trk, ]
     } else {
       # Transform CRS of track
       trk_multi_tr <- dat() %>% nest(-id) %>% 
@@ -651,8 +650,7 @@ trk <- reactive({
               "+init=epsg:", input$epsg_trk, sep = '')))
         }))
       # Subset filtered ID(s)
-      trk_multi_tr <- trk_multi_tr[trk_multi_tr$id %in% input$id_trk, ]
-      trk_multi_tr
+      trk_multi_tr[trk_multi_tr$id %in% input$id_trk, ]
     }
     
     
@@ -718,7 +716,7 @@ trk_resamp <- reactive({
   # Multiple IDs selected
   if (length(input$id_trk) > 1) {
     trk() %>% 
-      mutate(steps = map(track, function(x) {
+      mutate(track = map(track, function(x) {
         x %>% amt::track_resample(rate = minutes(10), tolerance = seconds(120)) 
       }))
     # group_by(trk(), id) %>% nest() %>%
@@ -750,7 +748,7 @@ trk_df <- reactive({
     if (length(input$id_trk) > 1) {
       # Convert back to data frame for illustration
       #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
-      trk_resamp_unnested_df <- trk_resamp() %>% select(id, steps) %>% unnest
+      trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
       # Swap columns
       #trk_resamp_unnested_df[, c("x_", "y_", "t_", "id", "burst_")]
     } else {
@@ -1025,34 +1023,90 @@ mod_pre <- reactive({
   if (length(input$id_trk) > 1) {
     
     if (input$model == "Resource Selection Function") {
-      return()
-      
+      validate(
+        need(input$rand_points, 'Please set no. of random points.')
+      )
+      # Define data frame for usage below
+      t_res <- trk_resamp()
+      # Test wether chosen minimum no. of relocations per burst is too high 
+      # for some IDs
+      removed_ids <- vector()
+      j = 0
+      for (i in 1:nrow(t_res)) {
+        min_burst <- t_res$track[[i]]
+        freq <- table(min_burst["burst_"]) 
+        pos <- which(freq >= 3)
+        # No observations given min. no. of relocations per burst
+        if (length(pos) == 0) {
+          j = j + 1
+          # Assign empty tibble (those tibbles will be removed below)
+          t_res$track[[i]] <- tibble()
+          # Store ID(s) in vector (for notification displayed to the user)
+          removed_ids[j] <- t_res$id[i]
+        }
+      }
+      # All IDs meet chosen minimum no. of relocations per burst
+      if (length(removed_ids) == 0) {
+        t_res %>% mutate(points = lapply(track, function(x) {
+          x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+            #time_of_day(include.crepuscule = FALSE) %>% 
+            random_points(n = input$rand_points) %>% 
+            extract_covariates(env(), where = "both") %>% 
+            mutate(land_use = factor(land_use)) 
+        }))
+      } else if (length(removed_ids) > 0) {
+        # Remove ID(s) not meeting chosen minimum no. of relocations per burst
+        showNotification(
+          ui = paste(
+            "The minimum no. of relocations per burst is too high for the 
+            ID(s): ", paste(removed_ids, collapse = ", "), ". Therefore, those 
+            were removed. If you want to retain those ID(s) please choose a 
+            lower value. Alternatively you may choose a lower resampling rate, 
+            i.e., a larger interval (in min) to retain the current no. of 
+            minimum relocations per burst.", sep = ''),
+          type = "warning",
+          duration = NULL
+        )
+        t_res %>% 
+          # remove IDs not meeting min no. of relocations per burst
+          filter(purrr::map_int(track, nrow) > 0) %>% # 100
+          mutate(points = lapply(track, function(x) {
+          x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+            #time_of_day(include.crepuscule = FALSE) %>% 
+            random_points(n = input$rand_points) %>% 
+            extract_covariates(env(), where = "both") %>% 
+            mutate(land_use = factor(land_use))
+        }))
+      }
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
         need(input$rand_stps, 'Please set no. of random steps.')
       )
       # Define data frame for usage below
-      m1 <- trk_resamp()
+      t_res <- trk_resamp()
       # Test wether chosen minimum no. of relocations per burst is too high 
       # for some IDs
       removed_ids <- vector()
       j = 0
-      for (i in 1:nrow(m1)) {
-        min_burst <- m1$steps[[i]]
+      for (i in 1:nrow(t_res)) {
+        min_burst <- t_res$track[[i]]
         freq <- table(min_burst["burst_"]) 
         pos <- which(freq >= 3)
+        # No observations given min. no. of relocations per burst
         if (length(pos) == 0) {
           j = j + 1
-          m1$steps[[i]] <- tibble()
-          removed_ids[j] <- m1$id[i]
+          # Assign empty tibble (those tibbles will be removed below)
+          t_res$track[[i]] <- tibble()
+          # Store ID(s) in vector (for notification displayed to the user)
+          removed_ids[j] <- t_res$id[i]
         }
       }
-      # All ID(s) meet chosen minimum no. of relocations per burst
+      # All IDs meet chosen minimum no. of relocations per burst
       if (length(removed_ids) == 0) {
         # Time of day is not selected
         if (input$tod == "") {
-          m1 %>%
-            mutate(steps = lapply(steps, function(x) {
+          t_res %>%
+            mutate(steps = lapply(track, function(x) {
               x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
                 amt::steps_by_burst() %>% 
                 amt::random_steps(n = input$rand_stps) %>% 
@@ -1063,8 +1117,8 @@ mod_pre <- reactive({
             }))
         } else {
           # A time of day option is selected 
-          m1 %>% 
-            mutate(steps = lapply(steps, function(x) {
+          t_res %>% 
+            mutate(steps = lapply(track, function(x) {
               x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
                 amt::steps_by_burst() %>% 
                 amt::random_steps(n = input$rand_stps) %>% 
@@ -1090,10 +1144,10 @@ mod_pre <- reactive({
           )
           # Time of day is not selected
           if (input$tod == "") {
-            m1 %>% 
+            t_res %>% 
               # remove IDs not meeting min no. of relocations per burst
-              filter(purrr::map_int(steps, nrow) > 0) %>% # 100
-              mutate(steps = lapply(steps, function(x) {
+              filter(purrr::map_int(track, nrow) > 0) %>% # 100
+              mutate(steps = lapply(track, function(x) {
                 x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
                   amt::steps_by_burst() %>% 
                   amt::random_steps(n = input$rand_stps) %>% 
@@ -1104,10 +1158,10 @@ mod_pre <- reactive({
               }))
           } else {
             # A time of day option is selected 
-            m1 %>% 
+            t_res %>% 
               # remove IDs not meeting min no. of relocations per burst
-              filter(purrr::map_int(steps, nrow) > 0) %>% # 100
-              mutate(steps = lapply(steps, function(x) {
+              filter(purrr::map_int(track, nrow) > 0) %>% # 100
+              mutate(steps = lapply(track, function(x) {
                 x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
                   amt::steps_by_burst() %>% 
                   amt::random_steps(n = input$rand_stps) %>% 
@@ -1134,29 +1188,19 @@ mod_pre <- reactive({
  per burst.')
       )
       # Time of day is not selected
-      if (input$tod == "") {
+      # random_points removes tod, adding tod afterwards doesn't work since
+      # tod requires class track_xyt or steps_xyt
+      #if (input$tod == "") {
         set.seed(12345)
-        trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+        trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>%
+          # time_of_day(include.crepuscule = input$tod) %>% 
           random_points(n = input$rand_points) %>% 
-          extract_covariates(env()) %>%
+          extract_covariates(env(), where = "both") %>%
           # Add renamed land use column ("lu") and convert to factor 
           mutate(land_use = factor(land_use))
-      } else {
+      #} else {
         # A time of day option is selected
-        set.seed(12345)
-        
-        trk_tod <- trk_resamp() %>%
-          filter_min_n_burst(min_n = input$min_burst) %>% 
-          time_of_day(include.crepuscule = input$tod)
-        
-        rsf_one <- trk_resamp() %>%
-          filter_min_n_burst(min_n = input$min_burst) %>%
-          random_points(n = input$rand_points) %>%
-          extract_covariates(env()) %>% 
-          mutate(land_use = factor(land_use))
-        # More appropriate solution???
-        cbind(rsf_one, trk_tod[, c("t_", "burst_", "tod_")])
-      }
+      #}
       
     } else if (input$model == "Integrated Step Selection Function") {
       # Test whether minimum no. of relocations per burst is too high (no 
@@ -1177,10 +1221,10 @@ mod_pre <- reactive({
           filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>%
           random_steps(n = input$rand_stps) %>% 
-          extract_covariates(env()) %>%
+          extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
                  cos_ta_ = cos(ta_), 
-                 lu = factor(land_use))
+                 land_use_end = factor(land_use_end))
         issf_one
         
       } else {
@@ -1190,10 +1234,10 @@ mod_pre <- reactive({
           filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>% 
           random_steps(n = input$rand_stps) %>% 
-          extract_covariates(env()) %>%
+          extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
                  cos_ta_ = cos(ta_), 
-                 lu = factor(land_use)) %>%
+                 land_use_end = factor(land_use_end)) %>%
           time_of_day(include.crepuscule = input$tod)
         
         # mutate loop for raster stack?
@@ -1211,16 +1255,16 @@ mod_pre_var <- reactive({
   # Multiple IDs selected (individual models)
   if (length(input$id_trk) > 1) {
     if (input$model == "Resource Selection Function") {
-
+      mod_pre()$points[[1]] %>% head(n=0) # column names only
     } else if (input$model == "Integrated Step Selection Function") {
-      mod_pre()$steps[[1]]
+      mod_pre()$steps[[1]] %>% head(n=0) # column names only
     }
   } else {
     # One ID selected (single model)
     if (input$model == "Resource Selection Function") {
-      mod_pre()
+      mod_pre() %>% head(n=0) # column names only
     } else if (input$model == "Integrated Step Selection Function") {
-      mod_pre()
+      mod_pre() %>% head(n=0) # column names only
     }
   }
 })
@@ -1255,9 +1299,7 @@ mod_all_var <- reactive({
                                   input$inter_5[2], sep = ''), 
                       no = '')
   # Concatenate all variable types
-  p_all_var <- paste(p_var, p_inter_1, p_inter_2, p_inter_3, 
-                     p_inter_4, p_inter_5, sep = '')
-  p_all_var
+  paste(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5, sep = '')
 })
 
 
@@ -1271,16 +1313,15 @@ mod <- reactive({
     
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
+      validate(
+        need(input$mod_var, 'Please select model variables.')
+      )
       set.seed(12345)
-      rsf_multi <- trk_resamp() %>% mutate(
-        m1 = map(data, ~ .x %>% random_points(n = input$rand_points) %>% 
-                   extract_covariates(env()) %>%
-                   # Add renamed land use column ("lu") and convert to factor,
-                   mutate(lu = factor(land_use)) %>% 
-                   fit_rsf(case_ ~ lu)))
+      rsf_multi <- mod_pre() %>% mutate(fit = map(
+        points, ~ amt::fit_rsf(., as.formula(paste("case_ ~", mod_all_var())))))
       # Data frame with coefficients
-      rsf_multi %>% mutate(m1_sum = map(m1, ~ broom::tidy(.$model))) %>% 
-        select(id, m1_sum) %>% unnest %>% as.data.frame()
+      rsf_multi %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
+        select(id, coef) %>% unnest() %>% as.data.frame()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
