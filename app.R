@@ -136,24 +136,24 @@ ui <- dashboardPage(skin = "green",
                       width = 2,
                       # Input: Select a file
                       fileInput(
-                        inputId = "dataset_tif",
+                        inputId = "dataset_env",
                         label = "Choose TIF File"#,
                         #accept = c("tif", ".tif")
                       ),
-                      actionButton('reset_tif', 'Reset Input'),
+                      actionButton('reset_env', 'Reset Input'),
                       # Horizontal line
                       hr(),
                       # Example Datasets
                       selectInput(
-                        inputId = "ex_data_tif",
+                        inputId = "ex_data_env",
                         label = "Choose Example Data:",
                         choices = c("None", "Fisher NY Land Use Area")
                       ),
                       # EPSG Code TIF
-                      uiOutput(outputId = "epsg_tif")
+                      uiOutput(outputId = "epsg_env")
                     ),
                     mainPanel = mainPanel(
-                      verbatimTextOutput(outputId = "contents_tif")
+                      verbatimTextOutput(outputId = "contents_env")
                     )
                   )
               )),
@@ -427,72 +427,54 @@ output$summary <- renderPrint({
 # Map Upload --------------------------------------------------------------
 
 
-values_tif <- reactiveValues(upload_state = NULL)
+values_env <- reactiveValues(upload_state = NULL)
 
-observeEvent(input$dataset_tif, {
-  values_tif$upload_state <- 'uploaded'
+observeEvent(input$dataset_env, {
+  values_env$upload_state <- 'uploaded'
 })
-observeEvent(input$reset_tif, {
-  values_tif$upload_state <- 'reset'
+observeEvent(input$reset_env, {
+  values_env$upload_state <- 'reset'
 })
-
-tifInput <- reactive({
-  if (is.null(values_tif$upload_state)){
-    switch (input$ex_data_tif,
+# Environmental data input e.g. TIF-File
+env <- reactive({
+  if (is.null(values_env$upload_state)){
+    switch (input$ex_data_env,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
             "None" = return()
     )
-  } else if (values_tif$upload_state == 'uploaded') {
+  } else if (values_env$upload_state == 'uploaded') {
     # Rename uploaded TIF for usage in model building
-    names(raster::raster(x = input$dataset_tif$datapath)) <- "land_use"
-  } else if (values_tif$upload_state == 'reset') {
-    switch (input$ex_data_tif,
+    names(raster::raster(x = input$dataset_env$datapath)) <- "land_use"
+  } else if (values_env$upload_state == 'reset') {
+    switch (input$ex_data_env,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
             "None" = return()
     )
   }
 })
 # Detect EPSG Code of TIF-File by left joining data frame "epsg_data"
-epsg_tif_detected <- reactive({
+epsg_env_detected <- reactive({
   validate(
-    need(tifInput(), '')
+    need(env(), '')
   )
-  tifInput_prj4 <- data.frame("prj4" = raster::projection(tifInput()),
+  env_prj4 <- data.frame("prj4" = raster::projection(env()),
                               stringsAsFactors = FALSE)
-  detect_epsg <- dplyr::left_join(tifInput_prj4, epsg_data, by = "prj4")
+  detect_epsg <- dplyr::left_join(env_prj4, epsg_data, by = "prj4")
   detect_epsg$code[1] # multiple matches possible choose the first one
   })
 # EPSG Code TIF
-output$epsg_tif <- renderUI({
+output$epsg_env <- renderUI({
   selectInput(
-    inputId = "epsg_tif",
+    inputId = "epsg_env",
     # Add general info and for case where detection isn't possible and default 
     # will be shown (epsg_csv)
     label = "Detected EPSG Code", 
     choices = na.omit(epsg_data$code),
-    selected = ifelse(!is.null(tifInput()) && !is.null(epsg_tif_detected()), 
-                      yes = epsg_tif_detected(),
+    selected = ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
+                      yes = epsg_env_detected(),
                       no = input$epsg_csv
                       )
 )
-})
-# Transform CRS of TIF Input
-# Use "env()" for extract_covariates(env()) not tifInput)!!!!!!!!!!!!!!!!!!!!!!!
-env <- reactive({
-  if (input$epsg_tif != input$epsg_trk && !is.null(input$epsg_tif)) {
-    # ????????????????????????????????????????????????
-    # Large Raster Layer introduces quite a few NAs
-    # Use 'to' argument and projectExtent(object, crs) as template? 
-    raster::projectRaster(tifInput(),
-                          crs = sp::CRS(paste("+init=epsg:", 
-                                              input$epsg_trk, sep = '')),
-                          res = raster::res(tifInput()), # keep resolution
-                          # categorial vairiables (nearest neighbor)
-                          method="ngb" #"bilinear",
-    )
-  } else {
-    tifInput()
-  }
 })
 # ?????????
 # Assign CRS if not described yet?
@@ -502,9 +484,9 @@ env <- reactive({
 
 # Display data currently not working as it has more than 2 dimensions
 # Equivalent of View(df) for shiny???
-output$contents_tif <- reactive({
+output$contents_env <- reactive({
   validate(
-    need(tifInput(), ''),
+    need(env(), ''),
     need(input$epsg_trk, '')
   )
   raster::projection(env()) # to test if the transformation worked (testing only)
@@ -585,17 +567,16 @@ output$id <- renderUI({
     )
   )
 })
-# EPSG Code Transformation
+# EPSG Code Transformation of tracking data (CSV)
 output$epsg_trk <- renderUI({
   validate(
     need(csvInput(), '')
   )
   selectInput(
     inputId = "epsg_trk",
-    # add info! (CSV and TIF will be transformed if EPSG deviates from TIF EPSG)
     label = "Transform CRS by EPSG Code:",
     choices = na.omit(epsg_data$code),
-    selected = input$epsg_tif
+    selected = input$epsg_env
   )
 })
 # Filter IDs of the track
@@ -749,10 +730,9 @@ trk_df <- reactive({
       # Convert back to data frame for illustration
       #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
-      # Swap columns
-      #trk_resamp_unnested_df[, c("x_", "y_", "t_", "id", "burst_")]
     } else {
       # One ID selected
+      # Swap columns for uniformity
       trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
     }
   }
