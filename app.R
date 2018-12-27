@@ -695,7 +695,6 @@ samp_rate <- reactive({
     need(input$x, ''),
     need(input$y, ''),
     need(input$ts, '')
-    # need(input$id_trk, '')
   )
   # Multiple IDs selected
  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
@@ -730,18 +729,18 @@ output$summary_samp_rate <- DT::renderDataTable({
   )
   # Multiple IDs selected
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-    # Exclude column "unit" (min)
-    sr <- samp_rate()[, -c(1, 10)] %>% round(2)
+    # Round results excluding columns "id" and "unit" (min)
+    sr <- subset(samp_rate(), select = - c(id, unit)) %>% round(2)
     # Add id column
-    sr <- cbind(samp_rate()[, 1], sr)
-    DT::datatable(sr, #samp_rate()[, -c(1, 10)] %>% round(2),
+    sr <- cbind(subset(samp_rate(), select = id), sr)
+    DT::datatable(sr,
                   rownames = FALSE,
                   options = list(searching = FALSE, paging = FALSE)
     )
   } else {
-    # One ID selected
+    # One/ no ID selected
     # Exclude column "unit" (min)
-    DT::datatable(samp_rate()[, -9] %>% round(2),
+    DT::datatable(subset(samp_rate(), select = - unit) %>% round(2),
                   rownames = FALSE,
                   options = list(searching = FALSE, paging = FALSE)
     )
