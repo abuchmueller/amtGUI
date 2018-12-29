@@ -1190,7 +1190,7 @@ mod_pre <- reactive({
     }
     
   } else {
-    # One ID selected (single model)
+    # One/ no ID selected (single model)
     if (input$model == "Resource Selection Function") {
       validate(
         need(input$rand_points, 'Please set no. of random points.'),
@@ -1254,10 +1254,6 @@ mod_pre <- reactive({
                  land_use_end = factor(land_use_end)) %>%
           time_of_day(include.crepuscule = input$tod)
         
-        # mutate loop for raster stack?
-        #for (i in 1:nrow(rhandsontable)) {
-        #  issf_one <- issf_one %>% mutate(lu = factor(input$rhandsontable_column_1_row[i]))  
-        #}
         issf_one
       }
     }
@@ -1269,12 +1265,13 @@ mod_pre_var <- reactive({
   # Multiple IDs selected (individual models)
   if (length(input$id_trk) > 1) {
     if (input$model == "Resource Selection Function") {
-      mod_pre()$points[[1]] %>% head(n=0) # column names only
+      # column names only using colnames() doesn't work here!
+      mod_pre()$points[[1]] %>% head(n=0)
     } else if (input$model == "Integrated Step Selection Function") {
       mod_pre()$steps[[1]] %>% head(n=0) # column names only
     }
   } else {
-    # One ID selected (single model)
+    # One/ no ID selected (single model)
     if (input$model == "Resource Selection Function") {
       mod_pre() %>% head(n=0) # column names only
     } else if (input$model == "Integrated Step Selection Function") {
