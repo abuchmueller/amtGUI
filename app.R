@@ -41,8 +41,8 @@ ui <- dashboardPage(skin = "green",
       menuItem("Upload Map", tabName = "map", icon = icon("upload")),
       menuItem("Configure Analysis", tabName = "configure", icon = icon("database"),
       menuSubItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
-      menuSubItem("Add Covariates", tabName = "covariates", icon = icon("database"))),
-      menuItem("Modeling", tabName = "model", icon = icon("database")),
+      menuSubItem("Add Covariates", tabName = "covariates", icon = icon("plus-square"))),
+      menuItem("Modeling", tabName = "model", icon = icon("table")),
       menuItem("Visualize", tabName = "plot", icon = icon("chart-area"))
     )),
 
