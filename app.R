@@ -239,7 +239,7 @@ tabItem(tabName = "covariates",
 # Visualize Tab -----------------------------------------------------------
 
 tabItem(tabName = "plot",
-        h2("Magic by Olli")),
+        h2("Under Maintenance")),
 
 # Modeling Tab ------------------------------------------------------------
 
@@ -259,7 +259,9 @@ tabItem(tabName = "model",
            # Set number of random points (RSF)
            uiOutput(outputId = "rand_points"),
            # Fit model button
-           actionButton("fit_button", "Fit Model")
+           actionButton("fit_button", "Fit Model"),
+           # Download button for model output
+           downloadButton("downloadData", "Download")
     ),
     column(width = 3,
            br(),
@@ -1391,7 +1393,15 @@ output$contents_mod <- DT::renderDataTable({
                 options = list(searching = FALSE, paging = FALSE))
 })
 
-
+# Downloadable csv of model output ----
+output$downloadData <- downloadHandler(
+  filename = function() {
+    paste("model_estimates", ".csv", sep = "")
+  },
+  content = function(file) {
+    write.csv(mod(), file, row.names = FALSE)
+  }
+)
 
 
 # Visualize ----------------------------------------------------------------
