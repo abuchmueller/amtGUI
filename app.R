@@ -59,7 +59,7 @@ ui <- dashboardPage(skin = "green",
           # Sidebar layout with input and output definitions
           sidebarLayout(
             sidebarPanel = sidebarPanel(
-              width = 2,
+              width = 3,
               # Input: Select a file
               fileInput(
                 inputId = "dataset_csv",
@@ -133,7 +133,7 @@ ui <- dashboardPage(skin = "green",
                   # Sidebar layout with input and output definitions
                   sidebarLayout(
                     sidebarPanel = sidebarPanel(
-                      width = 2,
+                      width = 3,
                       # Input: Select a file
                       fileInput(
                         inputId = "dataset_env",
@@ -195,7 +195,18 @@ tabItem(tabName = "track",
              value = NA, #2,
              min = 0,
              step = 1
-           )
+           ),
+           # Date range for track data frame ----
+           dateRangeInput(inputId = "dates",
+                          label = "Choose a Date Range",
+                          #start = min(),
+                          #end = max(),
+                          #min = min(),
+                          max = Sys.Date(),
+                          format = "yyyy-mm-dd",
+                          separator = "to",
+                          startview = "year"
+                          )
     )
   ),
   hr(),
