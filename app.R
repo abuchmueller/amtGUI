@@ -180,6 +180,7 @@ tabItem(tabName = "track",
     # Resample track
     column(width = 4, #offset = 1,
            h4("Resample Track"),
+           br(),
            numericInput(
              inputId = "rate_min",
              label = "Resampling Rate (in min):",
@@ -197,10 +198,10 @@ tabItem(tabName = "track",
              step = 1
            ),
            # Date range for track data frame ----
-           dateRangeInput(inputId = "dates",
+           dateRangeInput(inputId = "daterange",
                           label = "Choose a Date Range",
-                          #start = min(),
-                          #end = max(),
+                          #start = min(object = trk_df()[, "t_"]),
+                          #end = max(optimalerweise der max value aus der timestamp column),
                           #min = min(),
                           max = Sys.Date(),
                           format = "yyyy-mm-dd",
@@ -784,7 +785,7 @@ trk_resamp <- reactive({
   }
 })
 
-# Track table displayed in app (dependent on resampling)
+# Track table displayed in app (dependent on resampling) ----
 trk_df <- reactive({
   # Before resampling
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
@@ -1404,7 +1405,7 @@ output$contents_mod <- DT::renderDataTable({
                 options = list(searching = FALSE, paging = FALSE))
 })
 
-# Downloadable csv of model output ----
+# Downloadable csv of model output
 output$downloadData <- downloadHandler(
   filename = function() {
     paste("model_estimates", ".csv", sep = "")
