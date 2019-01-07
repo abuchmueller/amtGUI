@@ -200,9 +200,8 @@ tabItem(tabName = "track",
            # Date range for track data frame ----
            dateRangeInput(inputId = "daterange",
                           label = "Choose a Date Range",
-                          #start = min(object = trk_df()[, "t_"]),
-                          #end = max(optimalerweise der max value aus der timestamp column),
-                          #min = min(),
+                          start = Sys.Date(),
+                          end = Sys.Date(),
                           max = Sys.Date(),
                           format = "yyyy-mm-dd",
                           separator = "to",
@@ -785,21 +784,25 @@ trk_resamp <- reactive({
   }
 })
 
-# Track table displayed in app (dependent on resampling) ----
+# Track table displayed in app (dependent on resampling)
 trk_df <- reactive({
   # Before resampling
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
     # Multiple IDs selected
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-      trk() %>% select(id, track) %>% unnest
+      trk() %>% select(id, track) %>% unnest 
+      #Subsetting according to selected dateRangeInput
+      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       trk()[, c("id", "x_", "y_", "t_")]
+      #Subsetting according to selected dateRangeInput
+      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     } else {
-      # No ID selected
-      trk()
+      # No ID selected (Subsetting according to selected dateRangeInput)
+      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     }
   } else {
     # Resampled track
@@ -808,14 +811,18 @@ trk_df <- reactive({
       # Convert back to data frame for illustration
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
       #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
+      #Subsetting according to selected dateRangeInput
+      trk_resamp_unnested_df[trk_resamp_unnested_df$t_ >= input$daterange[1] & trk_resamp_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
+      #Subsetting according to selected dateRangeInput
+      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
     } else {
-      # No ID selected
-      trk_resamp()
+      # No ID selected (Subsetting according to selected dateRangeInput)
+      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
     }
   }
 }) 
