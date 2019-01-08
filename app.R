@@ -137,7 +137,8 @@ ui <- dashboardPage(skin = "green",
                       # Input: Select a file
                       fileInput(
                         inputId = "dataset_env",
-                        label = "Choose TIF File"#,
+                        label = "Choose TIF File",
+                        multiple = TRUE
                         #accept = c("tif", ".tif")
                       ),
                       actionButton('reset_env', 'Reset Input'),
@@ -444,11 +445,23 @@ env <- reactive({
             "None" = return()
     )
   } else if (values_env$upload_state == 'uploaded') {
-    raster_up <- raster::raster(x = input$dataset_env$datapath)
+    # raster_up <- raster::raster(x = input$dataset_env$datapath)
     # Rename uploaded TIF for usage in model building
-    names(raster_up) <- "land_use"
-    raster_up
-    # names(raster::raster(x = input$dataset_env$datapath)) <- "land_use"
+    # names(raster_up) <- "land_use"
+    # raster_up
+    
+    # Store uploaded TIF file(s) as raster layer(s) in list
+    raster_list <- lapply(input$dataset_env$datapath, raster::raster)
+    
+    # Test whether multiple files are uploaded
+    # Single file: access raster layer in list
+    if (length(raster_list) == 1) {
+      raster_list[[1]]
+    } else {
+      # Multiple files: store raster layers in list as raster stack
+      raster::stack(raster_list)
+    }
+    
   } else if (values_env$upload_state == 'reset') {
     switch (input$ex_data_env,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
