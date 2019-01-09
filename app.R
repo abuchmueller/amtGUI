@@ -771,7 +771,7 @@ trk_resamp <- reactive({
     trk() %>%
       mutate(track = map(track, function(x) {
         x %>% amt::track_resample(rate = minutes(10), tolerance = seconds(120))
-      }))
+      })) #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
     # group_by(trk(), id) %>% nest() %>%
     #   mutate(data = map(data, ~ .x %>%
     #                       track_resample(rate = minutes(input$rate_min),
@@ -780,7 +780,8 @@ trk_resamp <- reactive({
   } else {
     # One/ no ID selected
     trk() %>% track_resample(rate = minutes(input$rate_min),
-                             tolerance = minutes(input$tol_min))
+                             tolerance = minutes(input$tol_min))  #%>%
+      #filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
   }
 })
 
@@ -790,9 +791,9 @@ trk_df <- reactive({
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
     # Multiple IDs selected
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-      trk() %>% select(id, track) %>% unnest 
+      trk_unnested_df <- trk() %>% select(id, track) %>% unnest 
       #Subsetting according to selected dateRangeInput
-      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
+      trk_unnested_df[trk_unnested_df$t_ >= input$daterange[1] & trk_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
@@ -860,6 +861,13 @@ output$summary_trk <- renderPrint({
   }
 })
 
+# Dynamic start and end values for dateRangeInput object ----
+observeEvent(input$csv, {
+  updateDateRangeInput(session, 
+                       inputId = "daterange", 
+                       start = min(dat()$ts), 
+                       end = max(dat()$ts))
+})
 
 # Add Additional Covariates -----------------------------------------------
 
