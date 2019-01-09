@@ -3,6 +3,7 @@ library(shinydashboard)
 library(ggplot2)
 library(tidyverse)
 library(amt)
+library(rhandsontable)
 
 
 # Example data
@@ -234,6 +235,9 @@ tabItem(tabName = "covariates",
         ),
         hr(),
         fluidRow(
+          column(width = 6,
+                 rHandsontableOutput(outputId = "env_df")
+          )
         )
 ),
 
@@ -424,8 +428,6 @@ output$summary <- renderPrint({
 })
 
 
-
-
 # Map Upload --------------------------------------------------------------
 
 
@@ -438,7 +440,7 @@ observeEvent(input$reset_env, {
   values_env$upload_state <- 'reset'
 })
 # Environmental data input e.g. TIF-File
-env <- reactive({
+envInput <- reactive({
   if (is.null(values_env$upload_state)){
     switch (input$ex_data_env,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
@@ -446,20 +448,29 @@ env <- reactive({
     )
   } else if (values_env$upload_state == 'uploaded') {
     # raster_up <- raster::raster(x = input$dataset_env$datapath)
-    # Rename uploaded TIF for usage in model building
+    # # Rename uploaded TIF for usage in model building
     # names(raster_up) <- "land_use"
     # raster_up
     
+    # Get names of uploaded TIFs (named X0, X1, ... otherwise)
+    names_list <- lapply(input$dataset_env$name, function(x) x)
+    names_list <- gsub(".tif", '', names_list)
+    
     # Store uploaded TIF file(s) as raster layer(s) in list
     raster_list <- lapply(input$dataset_env$datapath, raster::raster)
-    
+
     # Test whether multiple files are uploaded
     # Single file: access raster layer in list
     if (length(raster_list) == 1) {
+      # Rename
+      names(raster_list[[1]]) <- names_list
       raster_list[[1]]
     } else {
       # Multiple files: store raster layers in list as raster stack
-      raster::stack(raster_list)
+      r_stack <- raster::stack(raster_list)
+      # Rename
+      names(r_stack) <- names_list
+      r_stack
     }
     
   } else if (values_env$upload_state == 'reset') {
@@ -467,6 +478,16 @@ env <- reactive({
             "Fisher NY Land Use Area" = land_use_fisher_ny,
             "None" = return()
     )
+  }
+})
+# Rename environmental data input if required
+env <- reactive({
+  if (!is.null(env_info())) {
+    envInput()
+  } else {
+    env_renamed <- envInput()
+    names(env_renamed) <- env_info()$Covariate
+    env_renamed
   }
 })
 # Detect EPSG Code of TIF-File by left joining data frame "epsg_data"
@@ -512,8 +533,6 @@ output$contents_env <- DT::renderDataTable({
                                        targets = 0:1)))
                 )
 })
-
-
 
 
 # Track Creation ----------------------------------------------------------
@@ -770,7 +789,8 @@ trk_resamp <- reactive({
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     trk() %>%
       mutate(track = map(track, function(x) {
-        x %>% amt::track_resample(rate = minutes(10), tolerance = seconds(120))
+        x %>% amt::track_resample(rate = minutes(input$rate_min),
+                                  tolerance = minutes(input$tol_min))
       }))
     # group_by(trk(), id) %>% nest() %>%
     #   mutate(data = map(data, ~ .x %>%
@@ -879,8 +899,27 @@ output$tod <- renderUI({
     selected = "" #"excl. dawn and dusk"
   )
 })
-
-
+# Create initial data frame with environmental covariates
+env_info <- reactive({
+  validate(
+    need(envInput(), '')
+  )
+  #For initial data upload
+  if (is.null(input$env_df)) {
+    data.frame("Covariate" = names(envInput()), 
+               "Categorial" = rep(TRUE, length(names(envInput()))),
+               stringsAsFactors = FALSE)
+  } else {
+    hot_to_r(input$env_df)
+  }
+})
+# Environmental covariates of raster layer or raster stack
+output$env_df = renderRHandsontable({
+  validate(
+    need(envInput(), '')
+  )
+  rhandsontable(env_info())
+})
 
 
 # Modeling ----------------------------------------------------------------
@@ -1062,7 +1101,7 @@ mod_pre <- reactive({
       for (i in 1:nrow(t_res)) {
         min_burst <- t_res$track[[i]]
         freq <- table(min_burst["burst_"]) 
-        pos <- which(freq >= 3)
+        pos <- which(freq >= input$min_burst)
         # No observations given min. no. of relocations per burst
         if (length(pos) == 0) {
           j = j + 1
@@ -1088,9 +1127,9 @@ mod_pre <- reactive({
             "The minimum no. of relocations per burst is too high for the 
             ID(s): ", paste(removed_ids, collapse = ", "), ". Therefore, those 
             were removed. If you want to retain those ID(s) please choose a 
-            lower value. Alternatively you may choose a lower resampling rate, 
-            i.e., a larger interval (in min) to retain the current no. of 
-            minimum relocations per burst.", sep = ''),
+            lower value. Alternatively you may choose a different resampling 
+            rate, i.e., adjust the interval (in min) to retain the current no.
+            of minimum relocations per burst.", sep = ''),
           type = "warning",
           duration = NULL
         )
@@ -1118,7 +1157,7 @@ mod_pre <- reactive({
       for (i in 1:nrow(t_res)) {
         min_burst <- t_res$track[[i]]
         freq <- table(min_burst["burst_"]) 
-        pos <- which(freq >= 3)
+        pos <- which(freq >= input$min_burst)
         # No observations given min. no. of relocations per burst
         if (length(pos) == 0) {
           j = j + 1
@@ -1163,9 +1202,9 @@ mod_pre <- reactive({
             "The minimum no. of relocations per burst is too high for the 
             ID(s): ", paste(removed_ids, collapse = ", "), ". Therefore, those 
             were removed. If you want to retain those ID(s) please choose a 
-            lower value. Alternatively you may choose a lower resampling rate, 
-            i.e., a larger interval (in min) to retain the current no. of 
-            minimum relocations per burst.", sep = ''),
+            lower value. Alternatively you may choose a different resampling 
+            rate, i.e., adjust the interval (in min) to retain the current no.
+            of minimum relocations per burst.", sep = ''),
           type = "warning",
           duration = NULL
           )
@@ -1210,8 +1249,8 @@ mod_pre <- reactive({
         need(nrow(trk_resamp() %>% 
                     filter_min_n_burst(min_n = input$min_burst)) != 0,
  'The minimum no. of relocations per burst is too high, please choose a lower 
- one. Alternatively you may choose a lower resampling rate, i.e., 
- a larger interval (in min) to keep the current no. of minimum relocations 
+ one. Alternatively you may choose a different resampling rate, i.e., 
+ adjust the interval (in min) to keep the current no. of minimum relocations 
  per burst.')
       )
       # Time of day is not selected
@@ -1236,9 +1275,9 @@ mod_pre <- reactive({
         need(input$rand_stps, 'Please set no. of random steps.'),
         need(nrow(trk_resamp() %>% 
                     filter_min_n_burst(min_n = input$min_burst)) != 0,
-'The minimum no. of relocations per burst is too high, please choose a lower 
- one. Alternatively you may choose a lower resampling rate, i.e., 
- a larger interval (in min) to keep the current no. of minimum relocations 
+ 'The minimum no. of relocations per burst is too high, please choose a lower 
+ one. Alternatively you may choose a different resampling rate, i.e., 
+ adjust the interval (in min) to keep the current no. of minimum relocations 
  per burst.')
       )
       # Time of day is not selected
