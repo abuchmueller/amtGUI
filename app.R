@@ -42,8 +42,8 @@ ui <- dashboardPage(skin = "green",
       menuItem("Upload Map", tabName = "map", icon = icon("upload")),
       menuItem("Configure Analysis", tabName = "configure", icon = icon("database"),
       menuSubItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
-      menuSubItem("Add Covariates", tabName = "covariates", icon = icon("database"))),
-      menuItem("Modeling", tabName = "model", icon = icon("database")),
+      menuSubItem("Add Covariates", tabName = "covariates", icon = icon("plus-square"))),
+      menuItem("Modeling", tabName = "model", icon = icon("table")),
       menuItem("Visualize", tabName = "plot", icon = icon("chart-area"))
     )),
 
@@ -60,7 +60,7 @@ ui <- dashboardPage(skin = "green",
           # Sidebar layout with input and output definitions
           sidebarLayout(
             sidebarPanel = sidebarPanel(
-              width = 2,
+              width = 3,
               # Input: Select a file
               fileInput(
                 inputId = "dataset_csv",
@@ -134,7 +134,7 @@ ui <- dashboardPage(skin = "green",
                   # Sidebar layout with input and output definitions
                   sidebarLayout(
                     sidebarPanel = sidebarPanel(
-                      width = 2,
+                      width = 3,
                       # Input: Select a file
                       fileInput(
                         inputId = "dataset_env",
@@ -182,6 +182,7 @@ tabItem(tabName = "track",
     # Resample track
     column(width = 4, #offset = 1,
            h4("Resample Track"),
+           br(),
            numericInput(
              inputId = "rate_min",
              label = "Resampling Rate (in min):",
@@ -197,7 +198,17 @@ tabItem(tabName = "track",
              value = NA, #2,
              min = 0,
              step = 1
-           )
+           ),
+           # Date range for track data frame ----
+           dateRangeInput(inputId = "daterange",
+                          label = "Choose a Date Range",
+                          start = Sys.Date(),
+                          end = Sys.Date(),
+                          max = Sys.Date(),
+                          format = "yyyy-mm-dd",
+                          separator = "to",
+                          startview = "year"
+                          )
     )
   ),
   hr(),
@@ -244,7 +255,7 @@ tabItem(tabName = "covariates",
 # Visualize Tab -----------------------------------------------------------
 
 tabItem(tabName = "plot",
-        h2("Magic by Olli")),
+        h2("Under Maintenance")),
 
 # Modeling Tab ------------------------------------------------------------
 
@@ -264,7 +275,9 @@ tabItem(tabName = "model",
            # Set number of random points (RSF)
            uiOutput(outputId = "rand_points"),
            # Fit model button
-           actionButton("fit_button", "Fit Model")
+           actionButton("fit_button", "Fit Model"),
+           # Download button for model output
+           downloadButton("downloadData", "Download")
     ),
     column(width = 3,
            br(),
@@ -800,7 +813,8 @@ trk_resamp <- reactive({
   } else {
     # One/ no ID selected
     trk() %>% track_resample(rate = minutes(input$rate_min),
-                             tolerance = minutes(input$tol_min))
+                             tolerance = minutes(input$tol_min))  #%>%
+      #filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
   }
 })
 
@@ -810,15 +824,19 @@ trk_df <- reactive({
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
     # Multiple IDs selected
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-      trk() %>% select(id, track) %>% unnest
+      trk_unnested_df <- trk() %>% select(id, track) %>% unnest 
+      #Subsetting according to selected dateRangeInput
+      trk_unnested_df[trk_unnested_df$t_ >= input$daterange[1] & trk_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       trk()[, c("id", "x_", "y_", "t_")]
+      #Subsetting according to selected dateRangeInput
+      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     } else {
-      # No ID selected
-      trk()
+      # No ID selected (Subsetting according to selected dateRangeInput)
+      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     }
   } else {
     # Resampled track
@@ -827,14 +845,18 @@ trk_df <- reactive({
       # Convert back to data frame for illustration
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
       #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
+      #Subsetting according to selected dateRangeInput
+      trk_resamp_unnested_df[trk_resamp_unnested_df$t_ >= input$daterange[1] & trk_resamp_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
+      #Subsetting according to selected dateRangeInput
+      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
     } else {
-      # No ID selected
-      trk_resamp()
+      # No ID selected (Subsetting according to selected dateRangeInput)
+      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
     }
   }
 }) 
@@ -872,6 +894,13 @@ output$summary_trk <- renderPrint({
   }
 })
 
+# Dynamic start and end values for dateRangeInput object ----
+observeEvent(input$csv, {
+  updateDateRangeInput(session, 
+                       inputId = "daterange", 
+                       start = min(dat()$ts), 
+                       end = max(dat()$ts))
+})
 
 # Add Additional Covariates -----------------------------------------------
 
@@ -1443,7 +1472,15 @@ output$contents_mod <- DT::renderDataTable({
                 options = list(searching = FALSE, paging = FALSE))
 })
 
-
+# Downloadable csv of model output
+output$downloadData <- downloadHandler(
+  filename = function() {
+    paste("model_estimates", ".csv", sep = "")
+  },
+  content = function(file) {
+    write.csv(mod(), file, row.names = FALSE)
+  }
+)
 
 
 # Visualize ----------------------------------------------------------------
