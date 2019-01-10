@@ -198,15 +198,18 @@ tabItem(tabName = "track",
              step = 1
            ),
            # Date range for track data frame ----
-           dateRangeInput(inputId = "daterange",
-                          label = "Choose a Date Range",
-                          start = Sys.Date(),
-                          end = Sys.Date(),
-                          max = Sys.Date(),
-                          format = "yyyy-mm-dd",
-                          separator = "to",
-                          startview = "year"
-                          )
+           # dateRangeInput(inputId = "daterange",
+           #                label = "Choose a Date Range",
+           #                start = min(trk()$ts),
+           #                end = max(trk()$ts),
+           #                max = Sys.Date(),
+           #                format = "yyyy-mm-dd",
+           #                separator = "to",
+           #                startview = "year"
+           #                )
+           uiOutput(
+             outputId = 'fetch_dr'
+           )
     )
   ),
   hr(),
@@ -861,12 +864,20 @@ output$summary_trk <- renderPrint({
   }
 })
 
-# Dynamic start and end values for dateRangeInput object ----
-observeEvent(input$csv, {
-  updateDateRangeInput(session, 
-                       inputId = "daterange", 
-                       start = min(dat()$ts), 
-                       end = max(dat()$ts))
+# Dynamic dateRangeInput for track data frame ----
+output$fetch_dr <- renderUI({
+  validate(
+    need(input$ts, '')
+  )
+  dateRangeInput(inputId = "daterange",
+                 label = "Choose a Date Range",
+                 start = min(trk()$t_),
+                 end = max(trk()$t_),
+                 max = Sys.Date(),
+                 format = "yyyy-mm-dd",
+                 separator = "to",
+                 startview = "year"
+  )
 })
 
 # Add Additional Covariates -----------------------------------------------
@@ -1420,7 +1431,7 @@ output$contents_mod <- DT::renderDataTable({
                 options = list(searching = FALSE, paging = FALSE))
 })
 
-# Downloadable csv of model output
+# Download button for csv of model output ----
 output$downloadData <- downloadHandler(
   filename = function() {
     paste("model_estimates", ".csv", sep = "")
