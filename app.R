@@ -958,7 +958,7 @@ env_info <- reactive({
 # Environmental covariates of raster layer or raster stack
 output$env_df = renderRHandsontable({
   validate(
-    need(envInput(), '')
+    need(env(), '')
   )
   rhandsontable(env_info())
 })
@@ -967,8 +967,12 @@ output$test <- renderPrint({
   # validate(
   #   need(mod_pre(), '')
   # )
-  paste(class(mod_pre()$l1), 
-        class(mod_pre()$l2)
+  paste(#class(mod_pre()$l1), 
+        #class(mod_pre()$l2)
+    class(mod_pre()$points[[1]][["l1"]]),
+    class(mod_pre()$points[[1]][["l2"]]),
+    class(mod_pre()$points[[7]][["l1"]]),
+    class(mod_pre()$points[[7]][["l2"]])
         )
 })
 # Modeling ----------------------------------------------------------------
@@ -1162,13 +1166,33 @@ mod_pre <- reactive({
       }
       # All IDs meet chosen minimum no. of relocations per burst
       if (length(removed_ids) == 0) {
-        t_res %>% mutate(points = lapply(track, function(x) {
+        t_res <- t_res %>% mutate(points = lapply(track, function(x) {
           x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
             #time_of_day(include.crepuscule = FALSE) %>% 
             random_points(n = input$rand_points) %>% 
-            extract_covariates(env(), where = "both") %>% 
-            mutate(land_use = factor(land_use)) 
+            extract_covariates(env(), where = "both") #%>% 
+            # mutate(land_use = factor(land_use))
         }))
+        # Convert environmental covariates to factor or numeric
+        # Loop through IDs
+        for (j in 1:nrow(t_res)) {
+          # Loop through environmental covariates
+          for (i in 1:length(names(env()))) {
+            # Convert to factor
+            if (env_info()$Categorial[i] && 
+                is.numeric(t_res$points[[j]][[names(env())[i]]])) {
+              t_res$points[[j]][[names(env())[i]]] <- as.factor(
+                t_res$points[[j]][[names(env())[i]]])
+            } else if (!env_info()$Categorial[i] && 
+                       is.factor(t_res$points[[j]][[names(env())[i]]])) {
+              # Convert to numeric
+              t_res$points[[j]][[names(env())[i]]] <- as.numeric(
+                levels(t_res$points[[j]][[names(env())[i]]]))[
+                  t_res$points[[j]][[names(env())[i]]]]
+            }
+          }
+        }
+        t_res
       } else if (length(removed_ids) > 0) {
         # Remove ID(s) not meeting chosen minimum no. of relocations per burst
         showNotification(
@@ -1182,16 +1206,36 @@ mod_pre <- reactive({
           type = "warning",
           duration = NULL
         )
-        t_res %>% 
+        t_res <- t_res %>% 
           # remove IDs not meeting min no. of relocations per burst
           filter(purrr::map_int(track, nrow) > 0) %>% # 100
           mutate(points = lapply(track, function(x) {
           x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
             #time_of_day(include.crepuscule = FALSE) %>% 
             random_points(n = input$rand_points) %>% 
-            extract_covariates(env(), where = "both") %>% 
-            mutate(land_use = factor(land_use))
+            extract_covariates(env(), where = "both") #%>% 
+            # mutate(land_use = factor(land_use))
         }))
+        # Convert environmental covariates to factor or numeric
+        # Loop through IDs
+        for (j in 1:nrow(t_res)) {
+          # Loop through environmental covariates
+          for (i in 1:length(names(env()))) {
+            # Convert to factor
+            if (env_info()$Categorial[i] && 
+                is.numeric(t_res$points[[j]][[names(env())[i]]])) {
+              t_res$points[[j]][[names(env())[i]]] <- as.factor(
+                t_res$points[[j]][[names(env())[i]]])
+            } else if (!env_info()$Categorial[i] && 
+                       is.factor(t_res$points[[j]][[names(env())[i]]])) {
+              # Convert to numeric
+              t_res$points[[j]][[names(env())[i]]] <- as.numeric(
+                levels(t_res$points[[j]][[names(env())[i]]]))[
+                  t_res$points[[j]][[names(env())[i]]]]
+            }
+          }
+        }
+        t_res
       }
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
