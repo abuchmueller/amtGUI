@@ -967,8 +967,8 @@ output$test <- renderPrint({
   # validate(
   #   need(mod_pre(), '')
   # )
-  paste(class(mod_pre()$l1_end), 
-        class(mod_pre()$l2_end)
+  paste(class(mod_pre()$l1), 
+        class(mod_pre()$l2)
         )
 })
 # Modeling ----------------------------------------------------------------
@@ -1307,26 +1307,30 @@ mod_pre <- reactive({
       # tod requires class track_xyt or steps_xyt
       #if (input$tod == "") {
         set.seed(12345)
-        trk_resamp() %>% filter_min_n_burst(min_n = input$min_burst) %>%
+        t_res <- trk_resamp() %>% 
+          filter_min_n_burst(min_n = input$min_burst) %>%
           # time_of_day(include.crepuscule = input$tod) %>% 
           random_points(n = input$rand_points) %>% 
-          extract_covariates(env(), where = "both") %>%
+          extract_covariates(env(), where = "both") #%>%
           # Add renamed land use column ("lu") and convert to factor 
-          mutate(land_use = factor(land_use))
+          #mutate(land_use = factor(land_use))
         
         # Convert environmental covariates to factor or numeric
-        # for (i in 1:length(names(env()))) {
-        #   # Convert to factor
-        #   if (env_info()$Categorial[i] &&
-        #       is.numeric(t_res[[names(env())[i]]])) {
-        #     t_res[[names(env())[i]]] <- as.factor(t_res[[names(env())[i]]])
-        #   } else if (!env_info()$Categorial[i] &&
-        #              is.factor(t_res[[names(env())[i]]])) {
-        #     # Convert to numeric
-        #     t_res[[names(env())[i]]] <- as.numeric(
-        #       levels(t_res[[names(env())[i]]]))[t_res[[names(env())[i]]]]
-        #   }
-        # }
+        # where = "both" doesn't apply to random points unlike 
+        # random steps (ISSF) i.e. we don't need to convert point start and end 
+        for (i in 1:length(names(env()))) {
+          # Convert to factor
+          if (env_info()$Categorial[i] &&
+              is.numeric(t_res[[names(env())[i]]])) {
+            t_res[[names(env())[i]]] <- as.factor(t_res[[names(env())[i]]])
+          } else if (!env_info()$Categorial[i] &&
+                     is.factor(t_res[[names(env())[i]]])) {
+            # Convert to numeric
+            t_res[[names(env())[i]]] <- as.numeric(
+              levels(t_res[[names(env())[i]]]))[t_res[[names(env())[i]]]]
+          }
+        }
+        t_res
       
     } else if (input$model == "Integrated Step Selection Function") {
       # Test whether minimum no. of relocations per burst is too high (no 
