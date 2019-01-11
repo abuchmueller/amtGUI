@@ -250,9 +250,7 @@ tabItem(tabName = "covariates",
         hr(),
         fluidRow(
           column(width = 6,
-                 rHandsontableOutput(outputId = "env_df"),
-                 # TEST!!!!!!!!!!
-                 verbatimTextOutput(outputId ="test")
+                 rHandsontableOutput(outputId = "env_df")
           )
         )
 ),
@@ -962,19 +960,8 @@ output$env_df = renderRHandsontable({
   )
   rhandsontable(env_info())
 })
-# TEST!!!!!!!!!!!!!!
-output$test <- renderPrint({
-  # validate(
-  #   need(mod_pre(), '')
-  # )
-  paste(#class(mod_pre()$l1), 
-        #class(mod_pre()$l2)
-    class(mod_pre()$points[[1]][["l1"]]),
-    class(mod_pre()$points[[1]][["l2"]]),
-    class(mod_pre()$points[[7]][["l1"]]),
-    class(mod_pre()$points[[7]][["l2"]])
-        )
-})
+
+
 # Modeling ----------------------------------------------------------------
 
 # Set number of random steps per relocation
@@ -1264,29 +1251,111 @@ mod_pre <- reactive({
       if (length(removed_ids) == 0) {
         # Time of day is not selected
         if (input$tod == '') {
-          t_res %>%
+          t_res <- t_res %>%
             mutate(steps = lapply(track, function(x) {
               x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
                 amt::steps_by_burst() %>% 
                 amt::random_steps(n = input$rand_stps) %>% 
                 amt::extract_covariates(env(), where = "both") %>% 
                 mutate(log_sl_ = log(sl_), 
-                       cos_ta_ = cos(ta_), 
-                       land_use_end = factor(land_use_end))
+                       cos_ta_ = cos(ta_)#, 
+                       #land_use_end = factor(land_use_end)
+                )
             }))
+          # Convert environmental covariates to factor or numeric
+          for (j in 1:nrow(t_res)) {
+            for (i in 1:length(names(env()))) {
+              # Convert to factor
+              if (env_info()$Categorial[i] && 
+                  is.numeric(
+                    t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]])) {
+                # Step start (_start)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_start", sep = '')]] <- as.factor(
+                    t_res$steps[[j]][[
+                      paste(names(env())[i], "_start", sep = '')]])
+                # Step end (_end)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_end", sep = '')]] <- as.factor(
+                    t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]])
+              } else if (!env_info()$Categorial[i] && 
+                         is.factor(t_res$steps[[j]][[
+                             paste(names(env())[i], "_end", sep = '')]])) {
+                # Convert to numeric
+                # Step start (_start)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+                    levels(t_res$steps[[j]][[
+                      paste(names(env())[i], "_start", sep = '')]])
+                  )[t_res$steps[[j]][[
+                    paste(names(env())[i], "_start", sep = '')]]]
+                # Step end (_end)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+                    levels(t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]])
+                  )[t_res$steps[[j]][[
+                    paste(names(env())[i], "_end", sep = '')]]]
+              }
+            }
+          }
+          t_res
         } else {
           # A time of day option is selected 
-          t_res %>% 
+          t_res <- t_res %>% 
             mutate(steps = lapply(track, function(x) {
               x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
                 amt::steps_by_burst() %>% 
                 amt::random_steps(n = input$rand_stps) %>% 
                 amt::extract_covariates(env(), where = "both") %>% 
                 mutate(log_sl_ = log(sl_), 
-                       cos_ta_ = cos(ta_), 
-                       land_use_end = factor(land_use_end)) %>% 
+                       cos_ta_ = cos(ta_)#, 
+                       #land_use_end = factor(land_use_end)
+                ) %>% 
                 time_of_day(include.crepuscule = input$tod)
             }))
+          # Convert environmental covariates to factor or numeric
+          for (j in 1:nrow(t_res)) {
+            for (i in 1:length(names(env()))) {
+              # Convert to factor
+              if (env_info()$Categorial[i] && 
+                  is.numeric(
+                    t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]])) {
+                # Step start (_start)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_start", sep = '')]] <- as.factor(
+                    t_res$steps[[j]][[
+                      paste(names(env())[i], "_start", sep = '')]])
+                # Step end (_end)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_end", sep = '')]] <- as.factor(
+                    t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]])
+              } else if (!env_info()$Categorial[i] && 
+                         is.factor(t_res$steps[[j]][[
+                           paste(names(env())[i], "_end", sep = '')]])) {
+                # Convert to numeric
+                # Step start (_start)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+                    levels(t_res$steps[[j]][[
+                      paste(names(env())[i], "_start", sep = '')]])
+                  )[t_res$steps[[j]][[
+                    paste(names(env())[i], "_start", sep = '')]]]
+                # Step end (_end)
+                t_res$steps[[j]][[
+                  paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+                    levels(t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]])
+                  )[t_res$steps[[j]][[
+                    paste(names(env())[i], "_end", sep = '')]]]
+              }
+            }
+          }
+          t_res
         }
       } else if (length(removed_ids) > 0) {
         # Remove ID(s) not meeting chosen minimum no. of relocations per burst
@@ -1303,7 +1372,7 @@ mod_pre <- reactive({
           )
           # Time of day is not selected
           if (input$tod == '') {
-            t_res %>% 
+            t_res <- t_res %>% 
               # remove IDs not meeting min no. of relocations per burst
               filter(purrr::map_int(track, nrow) > 0) %>% # 100
               mutate(steps = lapply(track, function(x) {
@@ -1312,12 +1381,53 @@ mod_pre <- reactive({
                   amt::random_steps(n = input$rand_stps) %>% 
                   amt::extract_covariates(env(), where = "both") %>% 
                   mutate(log_sl_ = log(sl_), 
-                         cos_ta_ = cos(ta_), 
-                         land_use_end = factor(land_use_end))
+                         cos_ta_ = cos(ta_)#, 
+                         #land_use_end = factor(land_use_end)
+                  )
               }))
+            # Convert environmental covariates to factor or numeric
+            for (j in 1:nrow(t_res)) {
+              for (i in 1:length(names(env()))) {
+                # Convert to factor
+                if (env_info()$Categorial[i] && 
+                    is.numeric(
+                      t_res$steps[[j]][[
+                        paste(names(env())[i], "_end", sep = '')]])) {
+                  # Step start (_start)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_start", sep = '')]] <- as.factor(
+                      t_res$steps[[j]][[
+                        paste(names(env())[i], "_start", sep = '')]])
+                  # Step end (_end)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_end", sep = '')]] <- as.factor(
+                      t_res$steps[[j]][[
+                        paste(names(env())[i], "_end", sep = '')]])
+                } else if (!env_info()$Categorial[i] && 
+                           is.factor(t_res$steps[[j]][[
+                             paste(names(env())[i], "_end", sep = '')]])) {
+                  # Convert to numeric
+                  # Step start (_start)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+                      levels(t_res$steps[[j]][[
+                        paste(names(env())[i], "_start", sep = '')]])
+                    )[t_res$steps[[j]][[
+                      paste(names(env())[i], "_start", sep = '')]]]
+                  # Step end (_end)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+                      levels(t_res$steps[[j]][[
+                        paste(names(env())[i], "_end", sep = '')]])
+                    )[t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]]]
+                }
+              }
+            }
+            t_res
           } else {
             # A time of day option is selected 
-            t_res %>% 
+            t_res <- t_res %>% 
               # remove IDs not meeting min no. of relocations per burst
               filter(purrr::map_int(track, nrow) > 0) %>% # 100
               mutate(steps = lapply(track, function(x) {
@@ -1326,10 +1436,51 @@ mod_pre <- reactive({
                   amt::random_steps(n = input$rand_stps) %>% 
                   amt::extract_covariates(env(), where = "both") %>% 
                   mutate(log_sl_ = log(sl_), 
-                         cos_ta_ = cos(ta_), 
-                         land_use_end = factor(land_use_end)) %>% 
+                         cos_ta_ = cos(ta_)#, 
+                         #land_use_end = factor(land_use_end)
+                  ) %>% 
                   time_of_day(include.crepuscule = input$tod)
               }))
+            # Convert environmental covariates to factor or numeric
+            for (j in 1:nrow(t_res)) {
+              for (i in 1:length(names(env()))) {
+                # Convert to factor
+                if (env_info()$Categorial[i] && 
+                    is.numeric(
+                      t_res$steps[[j]][[
+                        paste(names(env())[i], "_end", sep = '')]])) {
+                  # Step start (_start)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_start", sep = '')]] <- as.factor(
+                      t_res$steps[[j]][[
+                        paste(names(env())[i], "_start", sep = '')]])
+                  # Step end (_end)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_end", sep = '')]] <- as.factor(
+                      t_res$steps[[j]][[
+                        paste(names(env())[i], "_end", sep = '')]])
+                } else if (!env_info()$Categorial[i] && 
+                           is.factor(t_res$steps[[j]][[
+                             paste(names(env())[i], "_end", sep = '')]])) {
+                  # Convert to numeric
+                  # Step start (_start)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+                      levels(t_res$steps[[j]][[
+                        paste(names(env())[i], "_start", sep = '')]])
+                    )[t_res$steps[[j]][[
+                      paste(names(env())[i], "_start", sep = '')]]]
+                  # Step end (_end)
+                  t_res$steps[[j]][[
+                    paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+                      levels(t_res$steps[[j]][[
+                        paste(names(env())[i], "_end", sep = '')]])
+                    )[t_res$steps[[j]][[
+                      paste(names(env())[i], "_end", sep = '')]]]
+                }
+              }
+            }
+            t_res
           }  
       }
     }
