@@ -250,7 +250,9 @@ tabItem(tabName = "covariates",
         hr(),
         fluidRow(
           column(width = 6,
-                 rHandsontableOutput(outputId = "env_df")
+                 rHandsontableOutput(outputId = "env_df"),
+                 # TEST!!!!!!!!!!
+                 verbatimTextOutput(outputId ="test")
           )
         )
 ),
@@ -498,7 +500,7 @@ envInput <- reactive({
 })
 # Rename environmental data input if required
 env <- reactive({
-  if (!is.null(env_info())) {
+  if (is.null(env_info())) {
     envInput()
   } else {
     env_renamed <- envInput()
@@ -960,8 +962,15 @@ output$env_df = renderRHandsontable({
   )
   rhandsontable(env_info())
 })
-
-
+# TEST!!!!!!!!!!!!!!
+output$test <- renderPrint({
+  # validate(
+  #   need(mod_pre(), '')
+  # )
+  paste(class(mod_pre()$l1_end), 
+        class(mod_pre()$l2_end)
+        )
+})
 # Modeling ----------------------------------------------------------------
 
 # Set number of random steps per relocation
@@ -1210,7 +1219,7 @@ mod_pre <- reactive({
       # All IDs meet chosen minimum no. of relocations per burst
       if (length(removed_ids) == 0) {
         # Time of day is not selected
-        if (input$tod == "") {
+        if (input$tod == '') {
           t_res %>%
             mutate(steps = lapply(track, function(x) {
               x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
@@ -1249,7 +1258,7 @@ mod_pre <- reactive({
           duration = NULL
           )
           # Time of day is not selected
-          if (input$tod == "") {
+          if (input$tod == '') {
             t_res %>% 
               # remove IDs not meeting min no. of relocations per burst
               filter(purrr::map_int(track, nrow) > 0) %>% # 100
@@ -1304,9 +1313,20 @@ mod_pre <- reactive({
           extract_covariates(env(), where = "both") %>%
           # Add renamed land use column ("lu") and convert to factor 
           mutate(land_use = factor(land_use))
-      #} else {
-        # A time of day option is selected
-      #}
+        
+        # Convert environmental covariates to factor or numeric
+        # for (i in 1:length(names(env()))) {
+        #   # Convert to factor
+        #   if (env_info()$Categorial[i] &&
+        #       is.numeric(t_res[[names(env())[i]]])) {
+        #     t_res[[names(env())[i]]] <- as.factor(t_res[[names(env())[i]]])
+        #   } else if (!env_info()$Categorial[i] &&
+        #              is.factor(t_res[[names(env())[i]]])) {
+        #     # Convert to numeric
+        #     t_res[[names(env())[i]]] <- as.numeric(
+        #       levels(t_res[[names(env())[i]]]))[t_res[[names(env())[i]]]]
+        #   }
+        # }
       
     } else if (input$model == "Integrated Step Selection Function") {
       # Test whether minimum no. of relocations per burst is too high (no 
@@ -1321,32 +1341,85 @@ mod_pre <- reactive({
  per burst.')
       )
       # Time of day is not selected
-      if (input$tod == "") {
+      if (input$tod == '') {
         set.seed(12345)
-        issf_one <- trk_resamp() %>% 
+        t_res <- trk_resamp() %>% 
           filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>%
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
-                 cos_ta_ = cos(ta_), 
-                 land_use_end = factor(land_use_end))
-        issf_one
+                 cos_ta_ = cos(ta_)#, 
+                 #land_use_end = factor(land_use_end)
+                 )
+        
+        # Convert environmental covariates to factor or numeric
+        for (i in 1:length(names(env()))) {
+          # Convert to factor
+          if (env_info()$Categorial[i] && 
+              is.numeric(t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+            # Step start (_start)
+            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.factor(
+              t_res[[paste(names(env())[i], "_start", sep = '')]])
+            # Step end (_end)
+            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.factor(
+              t_res[[paste(names(env())[i], "_end", sep = '')]])
+          } else if (!env_info()$Categorial[i] && 
+                     is.factor(
+                       t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+            # Convert to numeric
+            # Step start (_start)
+            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+              levels(t_res[[paste(names(env())[i], "_start", sep = '')]]))[
+                t_res[[paste(names(env())[i], "_start", sep = '')]]]
+            # Step end (_end)
+            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+              levels(t_res[[paste(names(env())[i], "_end", sep = '')]]))[
+                t_res[[paste(names(env())[i], "_end", sep = '')]]]
+          }
+        }
+        t_res
         
       } else {
         # A time of day option is selected 
         set.seed(12345)
-        issf_one <- trk_resamp() %>% 
+        t_res <- trk_resamp() %>% 
           filter_min_n_burst(min_n = input$min_burst) %>% 
           steps_by_burst() %>% 
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
-                 cos_ta_ = cos(ta_), 
-                 land_use_end = factor(land_use_end)) %>%
+                 cos_ta_ = cos(ta_)#, 
+                 #land_use_end = factor(land_use_end)
+                 ) %>%
           time_of_day(include.crepuscule = input$tod)
         
-        issf_one
+        # Convert environmental covariates to factor or numeric
+        for (i in 1:length(names(env()))) {
+          # Convert to factor
+          if (env_info()$Categorial[i] && 
+              is.numeric(t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+            # Step start (_start)
+            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.factor(
+              t_res[[paste(names(env())[i], "_start", sep = '')]])
+            # Step end (_end)
+            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.factor(
+              t_res[[paste(names(env())[i], "_end", sep = '')]])
+          } else if (!env_info()$Categorial[i] && 
+                     is.factor(
+                       t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+            # Convert to numeric
+            # Step start (_start)
+            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+              levels(t_res[[paste(names(env())[i], "_start", sep = '')]]))[
+                t_res[[paste(names(env())[i], "_start", sep = '')]]]
+            # Step end (_end)
+            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+              levels(t_res[[paste(names(env())[i], "_end", sep = '')]]))[
+                t_res[[paste(names(env())[i], "_end", sep = '')]]]
+          }
+        }
+        t_res
       }
     }
   }
@@ -1448,7 +1521,7 @@ mod <- reactive({
   }
     
   } else {
-    # One ID selected (single model)
+    # One/ no ID selected (single model)
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
       set.seed(12345)
