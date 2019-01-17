@@ -947,7 +947,7 @@ env_info <- reactive({
   #For initial data upload
   if (is.null(input$env_df)) {
     data.frame("Covariate" = names(envInput()), 
-               "Categorial" = rep(TRUE, length(names(envInput()))),
+               "Categorical" = rep(TRUE, length(names(envInput()))),
                stringsAsFactors = FALSE)
   } else {
     hot_to_r(input$env_df)
@@ -1166,11 +1166,11 @@ mod_pre <- reactive({
           # Loop through environmental covariates
           for (i in 1:length(names(env()))) {
             # Convert to factor
-            if (env_info()$Categorial[i] && 
+            if (env_info()$Categorical[i] && 
                 is.numeric(t_res$points[[j]][[names(env())[i]]])) {
               t_res$points[[j]][[names(env())[i]]] <- as.factor(
                 t_res$points[[j]][[names(env())[i]]])
-            } else if (!env_info()$Categorial[i] && 
+            } else if (!env_info()$Categorical[i] && 
                        is.factor(t_res$points[[j]][[names(env())[i]]])) {
               # Convert to numeric
               t_res$points[[j]][[names(env())[i]]] <- as.numeric(
@@ -1209,11 +1209,11 @@ mod_pre <- reactive({
           # Loop through environmental covariates
           for (i in 1:length(names(env()))) {
             # Convert to factor
-            if (env_info()$Categorial[i] && 
+            if (env_info()$Categorical[i] && 
                 is.numeric(t_res$points[[j]][[names(env())[i]]])) {
               t_res$points[[j]][[names(env())[i]]] <- as.factor(
                 t_res$points[[j]][[names(env())[i]]])
-            } else if (!env_info()$Categorial[i] && 
+            } else if (!env_info()$Categorical[i] && 
                        is.factor(t_res$points[[j]][[names(env())[i]]])) {
               # Convert to numeric
               t_res$points[[j]][[names(env())[i]]] <- as.numeric(
@@ -1266,7 +1266,7 @@ mod_pre <- reactive({
           for (j in 1:nrow(t_res)) {
             for (i in 1:length(names(env()))) {
               # Convert to factor
-              if (env_info()$Categorial[i] && 
+              if (env_info()$Categorical[i] && 
                   is.numeric(
                     t_res$steps[[j]][[
                       paste(names(env())[i], "_end", sep = '')]])) {
@@ -1280,7 +1280,7 @@ mod_pre <- reactive({
                   paste(names(env())[i], "_end", sep = '')]] <- as.factor(
                     t_res$steps[[j]][[
                       paste(names(env())[i], "_end", sep = '')]])
-              } else if (!env_info()$Categorial[i] && 
+              } else if (!env_info()$Categorical[i] && 
                          is.factor(t_res$steps[[j]][[
                              paste(names(env())[i], "_end", sep = '')]])) {
                 # Convert to numeric
@@ -1320,7 +1320,7 @@ mod_pre <- reactive({
           for (j in 1:nrow(t_res)) {
             for (i in 1:length(names(env()))) {
               # Convert to factor
-              if (env_info()$Categorial[i] && 
+              if (env_info()$Categorical[i] && 
                   is.numeric(
                     t_res$steps[[j]][[
                       paste(names(env())[i], "_end", sep = '')]])) {
@@ -1334,7 +1334,7 @@ mod_pre <- reactive({
                   paste(names(env())[i], "_end", sep = '')]] <- as.factor(
                     t_res$steps[[j]][[
                       paste(names(env())[i], "_end", sep = '')]])
-              } else if (!env_info()$Categorial[i] && 
+              } else if (!env_info()$Categorical[i] && 
                          is.factor(t_res$steps[[j]][[
                            paste(names(env())[i], "_end", sep = '')]])) {
                 # Convert to numeric
@@ -1389,7 +1389,7 @@ mod_pre <- reactive({
             for (j in 1:nrow(t_res)) {
               for (i in 1:length(names(env()))) {
                 # Convert to factor
-                if (env_info()$Categorial[i] && 
+                if (env_info()$Categorical[i] && 
                     is.numeric(
                       t_res$steps[[j]][[
                         paste(names(env())[i], "_end", sep = '')]])) {
@@ -1403,7 +1403,7 @@ mod_pre <- reactive({
                     paste(names(env())[i], "_end", sep = '')]] <- as.factor(
                       t_res$steps[[j]][[
                         paste(names(env())[i], "_end", sep = '')]])
-                } else if (!env_info()$Categorial[i] && 
+                } else if (!env_info()$Categorical[i] && 
                            is.factor(t_res$steps[[j]][[
                              paste(names(env())[i], "_end", sep = '')]])) {
                   # Convert to numeric
@@ -1445,7 +1445,7 @@ mod_pre <- reactive({
             for (j in 1:nrow(t_res)) {
               for (i in 1:length(names(env()))) {
                 # Convert to factor
-                if (env_info()$Categorial[i] && 
+                if (env_info()$Categorical[i] && 
                     is.numeric(
                       t_res$steps[[j]][[
                         paste(names(env())[i], "_end", sep = '')]])) {
@@ -1459,7 +1459,7 @@ mod_pre <- reactive({
                     paste(names(env())[i], "_end", sep = '')]] <- as.factor(
                       t_res$steps[[j]][[
                         paste(names(env())[i], "_end", sep = '')]])
-                } else if (!env_info()$Categorial[i] && 
+                } else if (!env_info()$Categorical[i] && 
                            is.factor(t_res$steps[[j]][[
                              paste(names(env())[i], "_end", sep = '')]])) {
                   # Convert to numeric
@@ -1515,10 +1515,10 @@ mod_pre <- reactive({
         # random steps (ISSF) i.e. we don't need to convert point start and end 
         for (i in 1:length(names(env()))) {
           # Convert to factor
-          if (env_info()$Categorial[i] &&
+          if (env_info()$Categorical[i] &&
               is.numeric(t_res[[names(env())[i]]])) {
             t_res[[names(env())[i]]] <- as.factor(t_res[[names(env())[i]]])
-          } else if (!env_info()$Categorial[i] &&
+          } else if (!env_info()$Categorical[i] &&
                      is.factor(t_res[[names(env())[i]]])) {
             # Convert to numeric
             t_res[[names(env())[i]]] <- as.numeric(
@@ -1555,7 +1555,7 @@ mod_pre <- reactive({
         # Convert environmental covariates to factor or numeric
         for (i in 1:length(names(env()))) {
           # Convert to factor
-          if (env_info()$Categorial[i] && 
+          if (env_info()$Categorical[i] && 
               is.numeric(t_res[[paste(names(env())[i], "_end", sep = '')]])) {
             # Step start (_start)
             t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.factor(
@@ -1563,7 +1563,7 @@ mod_pre <- reactive({
             # Step end (_end)
             t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.factor(
               t_res[[paste(names(env())[i], "_end", sep = '')]])
-          } else if (!env_info()$Categorial[i] && 
+          } else if (!env_info()$Categorical[i] && 
                      is.factor(
                        t_res[[paste(names(env())[i], "_end", sep = '')]])) {
             # Convert to numeric
@@ -1596,7 +1596,7 @@ mod_pre <- reactive({
         # Convert environmental covariates to factor or numeric
         for (i in 1:length(names(env()))) {
           # Convert to factor
-          if (env_info()$Categorial[i] && 
+          if (env_info()$Categorical[i] && 
               is.numeric(t_res[[paste(names(env())[i], "_end", sep = '')]])) {
             # Step start (_start)
             t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.factor(
@@ -1604,7 +1604,7 @@ mod_pre <- reactive({
             # Step end (_end)
             t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.factor(
               t_res[[paste(names(env())[i], "_end", sep = '')]])
-          } else if (!env_info()$Categorial[i] && 
+          } else if (!env_info()$Categorical[i] && 
                      is.factor(
                        t_res[[paste(names(env())[i], "_end", sep = '')]])) {
             # Convert to numeric
