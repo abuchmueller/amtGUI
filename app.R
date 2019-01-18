@@ -668,7 +668,7 @@ dat_excl_id <- reactive({
     select(x = input$x, y = input$y, ts = input$ts) %>%  
     na.omit()
 })
-
+#trk()####
 # Create a track
 trk <- reactive({
     validate(
@@ -820,7 +820,7 @@ trk_resamp <- reactive({
       #filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
   }
 })
-
+#trk_df()####
 # Track table displayed in app (dependent on resampling)
 trk_df <- reactive({
   # Before resampling
@@ -898,14 +898,24 @@ output$summary_trk <- renderPrint({
 })
 
 # Dynamic dateRangeInput for track data frame ----
+
 output$fetch_dr <- renderUI({
   validate(
     need(input$ts, '')
   )
+  
+  if (input$id == '') {
+    min.date <- min(dat_excl_id()$ts)
+    max.date <- max(dat_excl_id()$ts)
+  } else {
+    min.date <- min(dat()$ts)
+    max.date <- max(dat()$ts)
+  }
+  
   dateRangeInput(inputId = "daterange",
                  label = "Choose a Date Range",
-                 start = min(trk()$t_),
-                 end = max(trk()$t_),
+                 start = min.date,
+                 end = max.date,
                  max = Sys.Date(),
                  format = "yyyy-mm-dd",
                  separator = "to",
