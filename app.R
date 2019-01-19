@@ -278,7 +278,8 @@ tabItem(tabName = "model",
            # Set number of random points (RSF)
            uiOutput(outputId = "rand_points"),
            # Fit model button
-           actionButton("fit_button", "Fit Model"),
+           actionButton("fit_button", "Fit Model", icon = icon("poll"), width = "112%"),
+           br(),
            # Download button for model output
            downloadButton("downloadData", "Download")
     ),
