@@ -835,9 +835,9 @@ trk_df <- reactive({
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
-      trk()[, c("id", "x_", "y_", "t_")]
+      # trk()[, c("id", "x_", "y_", "t_")]
       #Subsetting according to selected dateRangeInput
-      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
+      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_")]
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
       trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
@@ -855,9 +855,9 @@ trk_df <- reactive({
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
-      trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
+      # trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
       #Subsetting according to selected dateRangeInput
-      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
+      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_", "burst_")]
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
       trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
