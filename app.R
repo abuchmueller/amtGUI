@@ -250,6 +250,7 @@ tabItem(tabName = "covariates",
         hr(),
         fluidRow(
           column(width = 6,
+                 h4("Environmental Covariates"),
                  rHandsontableOutput(outputId = "env_df")
           )
         )
@@ -983,7 +984,7 @@ output$rand_stps <- renderUI({
   numericInput(
     inputId = "rand_stps",
     label = "Random Steps:",
-    value = 10, #NA,
+    value = 3, #10, #NA,
     min = 1,
     step = 1
 )
@@ -1005,8 +1006,8 @@ output$rand_points <- renderUI({
 var_choices <- reactive({
   # Positions of variables not to include in choices
   pos_excl <- which(sort(names(mod_pre_var())) %in% c(
-    "case_", "dt_", "x1_", "x2_", "y1_", "y2_", "t1_", "t2_", "burst_", 
-    "step_id_"))
+    "case_", "dt_", "x_", "y_", "x1_", "x2_", "y1_", "y2_", "t1_", "t2_", 
+    "burst_", "step_id_"))
   sort(names(mod_pre_var()))[-pos_excl]
 })
 # Filter model variables
@@ -1761,7 +1762,7 @@ output$contents_mod <- DT::renderDataTable({
     need(input$model != "None", '')
   )
   # Dependent on fit button above
-  DT::datatable(fit(),
+  DT::datatable(cbind(fit()[, 1:2], round(fit()[, 3:ncol(fit())], 4)),
                 rownames = FALSE,
                 options = list(searching = FALSE, paging = FALSE))
 })
