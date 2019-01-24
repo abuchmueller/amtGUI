@@ -169,20 +169,21 @@ tabItem(tabName = "track",
            #h4("Create a track"),
            uiOutput(outputId = "x"),
            uiOutput(outputId = "y"),
-           uiOutput(outputId = "ts"),
-           uiOutput(outputId = "id")
+           uiOutput(outputId = "ts")#,
+           # uiOutput(outputId = "id")
     ),
     # Transform EPSG Codes of CSV and TIF and select ID(s)
     column(width = 4, #offset = 1,
            br(),
            br(),
            uiOutput(outputId = "epsg_trk"),
+           uiOutput(outputId = "id"),
            uiOutput(outputId = "id_trk")
     ),
     # Resample track
     column(width = 4, #offset = 1,
            h4("Resample Track"),
-           br(),
+           #br(),
            numericInput(
              inputId = "rate_min",
              label = "Resampling Rate (in min):",
@@ -308,31 +309,31 @@ tabItem(tabName = "model",
     #        )
     column(width = 1,
            br(),
-           br(),
+           #br(),
            # Select 1st interaction
            uiOutput(outputId = "inter_1")
     ),
     column(width = 1,
            br(),
-           br(),
+           #br(),
            # Select 2nd interaction
            uiOutput(outputId = "inter_2")
     ),
     column(width = 1,
            br(),
-           br(),
+           #br(),
            # Select 3rd interaction
            uiOutput(outputId = "inter_3")
     ),
     column(width = 1,
            br(),
-           br(),
+           #br(),
            # Select 4th interaction
            uiOutput(outputId = "inter_4")
     ),
     column(width = 1,
            br(),
-           br(),
+           #br(),
            # Select 5th interaction
            uiOutput(outputId = "inter_5")
     )
