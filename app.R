@@ -1179,13 +1179,15 @@ mod_pre <- reactive({
             if (env_info()$Categorical[i] && 
                 is.numeric(t_res$points[[j]][[names(env())[i]]])) {
               t_res$points[[j]][[names(env())[i]]] <- as.factor(
-                t_res$points[[j]][[names(env())[i]]])
+                t_res$points[[j]][[names(env())[i]]]
+              )
             } else if (!env_info()$Categorical[i] && 
                        is.factor(t_res$points[[j]][[names(env())[i]]])) {
               # Convert to numeric
               t_res$points[[j]][[names(env())[i]]] <- as.numeric(
-                levels(t_res$points[[j]][[names(env())[i]]]))[
-                  t_res$points[[j]][[names(env())[i]]]]
+                levels(t_res$points[[j]][[names(env())[i]]]
+                )
+              )[t_res$points[[j]][[names(env())[i]]]]
             }
           }
         }
@@ -1222,13 +1224,15 @@ mod_pre <- reactive({
             if (env_info()$Categorical[i] && 
                 is.numeric(t_res$points[[j]][[names(env())[i]]])) {
               t_res$points[[j]][[names(env())[i]]] <- as.factor(
-                t_res$points[[j]][[names(env())[i]]])
+                t_res$points[[j]][[names(env())[i]]]
+              )
             } else if (!env_info()$Categorical[i] && 
                        is.factor(t_res$points[[j]][[names(env())[i]]])) {
               # Convert to numeric
               t_res$points[[j]][[names(env())[i]]] <- as.numeric(
-                levels(t_res$points[[j]][[names(env())[i]]]))[
-                  t_res$points[[j]][[names(env())[i]]]]
+                levels(t_res$points[[j]][[names(env())[i]]]
+                )
+              )[t_res$points[[j]][[names(env())[i]]]]
             }
           }
         }
