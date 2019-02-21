@@ -685,16 +685,13 @@ trk <- reactive({
   if (input$id == '') {
     # Assign known EPSG Code to tracking data
     track <- make_track(dat_excl_id(), x, y, ts,
-                        crs = sp::CRS(paste("+init=epsg:", input$epsg_csv,
-                                            sep = ''))
+                        crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
       track
     } else {
-      transform_coords(track, sp::CRS(paste("+init=epsg:",
-                                            input$epsg_trk, sep = ''))
-      )
+      transform_coords(track, sp::CRS(paste0("+init=epsg:", input$epsg_trk)))
     }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     # Multiple IDs selected (individual models)
@@ -702,8 +699,9 @@ trk <- reactive({
       # Assign known EPSG Code to tracking data
       track_multi <- dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
-          amt::make_track(d, x, y, ts, crs = sp::CRS(paste(
-            "+init=epsg:", input$epsg_csv, sep = '')))
+          amt::make_track(d, x, y, ts, crs = sp::CRS(paste0("+init=epsg:",
+                                                            input$epsg_csv))
+          )
         }))
       # Subset filtered ID(s)
       track_multi[track_multi$id %in% input$id_trk, ]
@@ -711,10 +709,10 @@ trk <- reactive({
       # Transform CRS of track
       trk_multi_tr <- dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
-          amt::make_track(d, x, y, ts, crs = sp::CRS(paste(
-            "+init=epsg:", input$epsg_csv, sep = ''))) %>%
-            amt::transform_coords(sp::CRS(paste(
-              "+init=epsg:", input$epsg_trk, sep = '')))
+          amt::make_track(d, x, y, ts, crs = sp::CRS(paste0(
+            "+init=epsg:", input$epsg_csv))) %>% 
+            amt::transform_coords(sp::CRS(paste0("+init=epsg:", input$epsg_trk))
+            )
         }))
       # Subset filtered ID(s)
       trk_multi_tr[trk_multi_tr$id %in% input$id_trk, ]
@@ -723,8 +721,7 @@ trk <- reactive({
     # One ID selected
     # Assign known EPSG Code to tracking data
     track_one <- make_track(dat(), x, y, ts, id = id,
-                        crs = sp::CRS(paste("+init=epsg:", input$epsg_csv,
-                                            sep = ''))
+                        crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
     # Subset filtered ID(s)
     track_one <- track_one[track_one$id %in% input$id_trk, ]
@@ -733,8 +730,7 @@ trk <- reactive({
     if (input$epsg_csv == input$epsg_trk) {
       track_one
     } else {
-      transform_coords(track_one, sp::CRS(paste("+init=epsg:",
-                                            input$epsg_trk, sep = ''))
+      transform_coords(track_one, sp::CRS(paste0("+init=epsg:", input$epsg_trk))
       )
     }
   }
@@ -1008,7 +1004,8 @@ var_choices <- reactive({
   # Positions of variables not to include in choices
   pos_excl <- which(sort(names(mod_pre_var())) %in% c(
     "case_", "dt_", "x_", "y_", "x1_", "x2_", "y1_", "y2_", "t1_", "t2_", 
-    "burst_", "step_id_"))
+    "burst_", "step_id_")
+  )
   sort(names(mod_pre_var()))[-pos_excl]
 })
 # Filter model variables
@@ -1196,13 +1193,13 @@ mod_pre <- reactive({
       } else if (length(removed_ids) > 0) {
         # Remove ID(s) not meeting chosen minimum no. of relocations per burst
         showNotification(
-          ui = paste(
+          ui = paste0(
             "The minimum no. of relocations per burst is too high for the 
-            ID(s): ", paste(removed_ids, collapse = ", "), ". Therefore, those 
+            ID(s): ", paste0(removed_ids, collapse = ", "), ". Therefore, those 
             were removed. If you want to retain those ID(s) please choose a 
             lower value. Alternatively you may choose a different resampling 
             rate, i.e., adjust the interval (in min) to retain the current no.
-            of minimum relocations per burst.", sep = ''),
+            of minimum relocations per burst."),
           type = "warning",
           duration = NULL
         )
@@ -1281,36 +1278,33 @@ mod_pre <- reactive({
               # Convert to factor
               if (env_info()$Categorical[i] && 
                   is.numeric(
-                    t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]])) {
+                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
                 # Step start (_start)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_start", sep = '')]] <- as.factor(
-                    t_res$steps[[j]][[
-                      paste(names(env())[i], "_start", sep = '')]])
+                  paste0(names(env())[i], "_start")]] <- as.factor(
+                    t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                  )
                 # Step end (_end)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_end", sep = '')]] <- as.factor(
-                    t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]])
+                  paste0(names(env())[i], "_end")]] <- as.factor(
+                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                  )
               } else if (!env_info()$Categorical[i] && 
                          is.factor(t_res$steps[[j]][[
-                             paste(names(env())[i], "_end", sep = '')]])) {
+                             paste0(names(env())[i], "_end")]])) {
                 # Convert to numeric
                 # Step start (_start)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
-                    levels(t_res$steps[[j]][[
-                      paste(names(env())[i], "_start", sep = '')]])
-                  )[t_res$steps[[j]][[
-                    paste(names(env())[i], "_start", sep = '')]]]
+                  paste0(names(env())[i], "_start")]] <- as.numeric(
+                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                    )
+                  )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
                 # Step end (_end)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
-                    levels(t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]])
-                  )[t_res$steps[[j]][[
-                    paste(names(env())[i], "_end", sep = '')]]]
+                  paste0(names(env())[i], "_end")]] <- as.numeric(
+                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                    )
+                  )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
               }
             }
           }
@@ -1335,36 +1329,33 @@ mod_pre <- reactive({
               # Convert to factor
               if (env_info()$Categorical[i] && 
                   is.numeric(
-                    t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]])) {
+                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
                 # Step start (_start)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_start", sep = '')]] <- as.factor(
-                    t_res$steps[[j]][[
-                      paste(names(env())[i], "_start", sep = '')]])
+                  paste0(names(env())[i], "_start")]] <- as.factor(
+                    t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                  )
                 # Step end (_end)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_end", sep = '')]] <- as.factor(
-                    t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]])
+                  paste0(names(env())[i], "_end")]] <- as.factor(
+                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                  )
               } else if (!env_info()$Categorical[i] && 
                          is.factor(t_res$steps[[j]][[
-                           paste(names(env())[i], "_end", sep = '')]])) {
+                           paste0(names(env())[i], "_end")]])) {
                 # Convert to numeric
                 # Step start (_start)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
-                    levels(t_res$steps[[j]][[
-                      paste(names(env())[i], "_start", sep = '')]])
-                  )[t_res$steps[[j]][[
-                    paste(names(env())[i], "_start", sep = '')]]]
+                  paste0(names(env())[i], "_start")]] <- as.numeric(
+                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                    )
+                  )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
                 # Step end (_end)
                 t_res$steps[[j]][[
-                  paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
-                    levels(t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]])
-                  )[t_res$steps[[j]][[
-                    paste(names(env())[i], "_end", sep = '')]]]
+                  paste0(names(env())[i], "_end")]] <- as.numeric(
+                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                    )
+                  )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
               }
             }
           }
@@ -1373,13 +1364,13 @@ mod_pre <- reactive({
       } else if (length(removed_ids) > 0) {
         # Remove ID(s) not meeting chosen minimum no. of relocations per burst
         showNotification(
-          ui = paste(
+          ui = paste0(
             "The minimum no. of relocations per burst is too high for the 
-            ID(s): ", paste(removed_ids, collapse = ", "), ". Therefore, those 
+            ID(s): ", paste0(removed_ids, collapse = ", "), ". Therefore, those 
             were removed. If you want to retain those ID(s) please choose a 
             lower value. Alternatively you may choose a different resampling 
             rate, i.e., adjust the interval (in min) to retain the current no.
-            of minimum relocations per burst.", sep = ''),
+            of minimum relocations per burst."),
           type = "warning",
           duration = NULL
           )
@@ -1405,35 +1396,35 @@ mod_pre <- reactive({
                 if (env_info()$Categorical[i] && 
                     is.numeric(
                       t_res$steps[[j]][[
-                        paste(names(env())[i], "_end", sep = '')]])) {
+                        paste0(names(env())[i], "_end")]])) {
                   # Step start (_start)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_start", sep = '')]] <- as.factor(
-                      t_res$steps[[j]][[
-                        paste(names(env())[i], "_start", sep = '')]])
+                    paste0(names(env())[i], "_start")]] <- as.factor(
+                      t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                    )
                   # Step end (_end)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_end", sep = '')]] <- as.factor(
-                      t_res$steps[[j]][[
-                        paste(names(env())[i], "_end", sep = '')]])
+                    paste0(names(env())[i], "_end")]] <- as.factor(
+                      t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                    )
                 } else if (!env_info()$Categorical[i] && 
                            is.factor(t_res$steps[[j]][[
-                             paste(names(env())[i], "_end", sep = '')]])) {
+                             paste0(names(env())[i], "_end")]])) {
                   # Convert to numeric
                   # Step start (_start)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+                    paste0(names(env())[i], "_start")]] <- as.numeric(
                       levels(t_res$steps[[j]][[
-                        paste(names(env())[i], "_start", sep = '')]])
-                    )[t_res$steps[[j]][[
-                      paste(names(env())[i], "_start", sep = '')]]]
+                        paste0(names(env())[i], "_start")]]
+                      )
+                    )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
                   # Step end (_end)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
+                    paste0(names(env())[i], "_end")]] <- as.numeric(
                       levels(t_res$steps[[j]][[
-                        paste(names(env())[i], "_end", sep = '')]])
-                    )[t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]]]
+                        paste0(names(env())[i], "_end")]]
+                      )
+                    )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
                 }
               }
             }
@@ -1460,36 +1451,34 @@ mod_pre <- reactive({
                 # Convert to factor
                 if (env_info()$Categorical[i] && 
                     is.numeric(
-                      t_res$steps[[j]][[
-                        paste(names(env())[i], "_end", sep = '')]])) {
+                      t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
                   # Step start (_start)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_start", sep = '')]] <- as.factor(
-                      t_res$steps[[j]][[
-                        paste(names(env())[i], "_start", sep = '')]])
+                    paste0(names(env())[i], "_start")]] <- as.factor(
+                      t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                    )
                   # Step end (_end)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_end", sep = '')]] <- as.factor(
-                      t_res$steps[[j]][[
-                        paste(names(env())[i], "_end", sep = '')]])
+                    paste0(names(env())[i], "_end")]] <- as.factor(
+                      t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                    )
                 } else if (!env_info()$Categorical[i] && 
                            is.factor(t_res$steps[[j]][[
-                             paste(names(env())[i], "_end", sep = '')]])) {
+                             paste0(names(env())[i], "_end")]])) {
                   # Convert to numeric
                   # Step start (_start)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
+                    paste0(names(env())[i], "_start")]] <- as.numeric(
                       levels(t_res$steps[[j]][[
-                        paste(names(env())[i], "_start", sep = '')]])
-                    )[t_res$steps[[j]][[
-                      paste(names(env())[i], "_start", sep = '')]]]
+                        paste0(names(env())[i], "_start")]]
+                      )
+                    )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
                   # Step end (_end)
                   t_res$steps[[j]][[
-                    paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
-                      levels(t_res$steps[[j]][[
-                        paste(names(env())[i], "_end", sep = '')]])
-                    )[t_res$steps[[j]][[
-                      paste(names(env())[i], "_end", sep = '')]]]
+                    paste0(names(env())[i], "_end")]] <- as.numeric(
+                      levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                      )
+                    )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
                 }
               }
             }
@@ -1569,25 +1558,29 @@ mod_pre <- reactive({
         for (i in 1:length(names(env()))) {
           # Convert to factor
           if (env_info()$Categorical[i] && 
-              is.numeric(t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+              is.numeric(t_res[[paste0(names(env())[i], "_end")]])) {
             # Step start (_start)
-            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.factor(
-              t_res[[paste(names(env())[i], "_start", sep = '')]])
+            t_res[[paste0(names(env())[i], "_start")]] <- as.factor(
+              t_res[[paste0(names(env())[i], "_start")]]
+            )
             # Step end (_end)
-            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.factor(
-              t_res[[paste(names(env())[i], "_end", sep = '')]])
+            t_res[[paste0(names(env())[i], "_end")]] <- as.factor(
+              t_res[[paste0(names(env())[i], "_end")]]
+            )
           } else if (!env_info()$Categorical[i] && 
                      is.factor(
-                       t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+                       t_res[[paste0(names(env())[i], "_end")]])) {
             # Convert to numeric
             # Step start (_start)
-            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
-              levels(t_res[[paste(names(env())[i], "_start", sep = '')]]))[
-                t_res[[paste(names(env())[i], "_start", sep = '')]]]
+            t_res[[paste0(names(env())[i], "_start")]] <- as.numeric(
+              levels(t_res[[paste0(names(env())[i], "_start")]]
+              )
+            )[t_res[[paste0(names(env())[i], "_start")]]]
             # Step end (_end)
-            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
-              levels(t_res[[paste(names(env())[i], "_end", sep = '')]]))[
-                t_res[[paste(names(env())[i], "_end", sep = '')]]]
+            t_res[[paste0(names(env())[i], "_end")]] <- as.numeric(
+              levels(t_res[[paste0(names(env())[i], "_end")]]
+              )
+            )[t_res[[paste0(names(env())[i], "_end")]]]
           }
         }
         t_res
@@ -1610,25 +1603,29 @@ mod_pre <- reactive({
         for (i in 1:length(names(env()))) {
           # Convert to factor
           if (env_info()$Categorical[i] && 
-              is.numeric(t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+              is.numeric(t_res[[paste0(names(env())[i], "_end")]])) {
             # Step start (_start)
-            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.factor(
-              t_res[[paste(names(env())[i], "_start", sep = '')]])
+            t_res[[paste0(names(env())[i], "_start")]] <- as.factor(
+              t_res[[paste0(names(env())[i], "_start")]]
+            )
             # Step end (_end)
-            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.factor(
-              t_res[[paste(names(env())[i], "_end", sep = '')]])
+            t_res[[paste0(names(env())[i], "_end")]] <- as.factor(
+              t_res[[paste0(names(env())[i], "_end")]]
+            )
           } else if (!env_info()$Categorical[i] && 
                      is.factor(
-                       t_res[[paste(names(env())[i], "_end", sep = '')]])) {
+                       t_res[[paste0(names(env())[i], "_end")]])) {
             # Convert to numeric
             # Step start (_start)
-            t_res[[paste(names(env())[i], "_start", sep = '')]] <- as.numeric(
-              levels(t_res[[paste(names(env())[i], "_start", sep = '')]]))[
-                t_res[[paste(names(env())[i], "_start", sep = '')]]]
+            t_res[[paste0(names(env())[i], "_start")]] <- as.numeric(
+              levels(t_res[[paste0(names(env())[i], "_start")]]
+              )
+            )[t_res[[paste0(names(env())[i], "_start")]]]
             # Step end (_end)
-            t_res[[paste(names(env())[i], "_end", sep = '')]] <- as.numeric(
-              levels(t_res[[paste(names(env())[i], "_end", sep = '')]]))[
-                t_res[[paste(names(env())[i], "_end", sep = '')]]]
+            t_res[[paste0(names(env())[i], "_end")]] <- as.numeric(
+              levels(t_res[[paste0(names(env())[i], "_end")]]
+              )
+            )[t_res[[paste0(names(env())[i], "_end")]]]
           }
         }
         t_res
@@ -1663,31 +1660,31 @@ mod_all_var <- reactive({
     need(input$mod_var, 'Please select model variables.')
   )
   # Model variables
-  p_var <- paste(input$mod_var, collapse = " + ")
+  p_var <- paste0(input$mod_var, collapse = " + ")
 
   # Interaction terms
   p_inter_1 <- ifelse(length(input$inter_1) == 2, 
-                      yes = paste(" + ", input$inter_1[1], ":", 
-                                  input$inter_1[2], sep = ''), 
+                      yes = paste0(" + ", input$inter_1[1], ":", 
+                                   input$inter_1[2]), 
                       no = '')
   p_inter_2 <- ifelse(length(input$inter_2) == 2, 
-                      yes = paste(" + ", input$inter_2[1], ":", 
-                                  input$inter_2[2], sep = ''), 
+                      yes = paste0(" + ", input$inter_2[1], ":", 
+                                  input$inter_2[2]), 
                       no = '')
   p_inter_3 <- ifelse(length(input$inter_3) == 2, 
-                      yes = paste(" + ", input$inter_3[1], ":", 
-                                  input$inter_3[2], sep = ''), 
+                      yes = paste0(" + ", input$inter_3[1], ":", 
+                                  input$inter_3[2]), 
                       no = '')
   p_inter_4 <- ifelse(length(input$inter_4) == 2, 
-                      yes = paste(" + ", input$inter_4[1], ":", 
-                                  input$inter_4[2], sep = ''), 
+                      yes = paste0(" + ", input$inter_4[1], ":", 
+                                  input$inter_4[2]), 
                       no = '')
   p_inter_5 <- ifelse(length(input$inter_5) == 2, 
-                      yes = paste(" + ", input$inter_5[1], ":", 
-                                  input$inter_5[2], sep = ''), 
+                      yes = paste0(" + ", input$inter_5[1], ":", 
+                                  input$inter_5[2]), 
                       no = '')
   # Concatenate all variable types
-  paste(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5, sep = '')
+  paste0(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5)
 })
 
 # Fit button (to start model fitting)
@@ -1771,7 +1768,7 @@ output$contents_mod <- DT::renderDataTable({
 # Download button for csv of model output ----
 output$downloadData <- downloadHandler(
   filename = function() {
-    paste("model_estimates", ".csv", sep = "")
+    paste0("model_estimates", ".csv")
   },
   content = function(file) {
     write.csv(mod(), file, row.names = FALSE)
