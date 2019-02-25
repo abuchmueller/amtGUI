@@ -70,12 +70,11 @@ ui <- dashboardPage(skin = "green",
                            "text/comma-separated-values,text/plain", ".csv")
               ),
               actionButton('reset', 'Reset Input'),
-              # Horizontal line
-              hr(),
+              #hr(),
               # Input: Checkbox if file has header
               checkboxInput(
                 inputId = "header",
-                label = "Header",
+                label = "File has Header",
                 value = TRUE
               ),
               # Input: Select separator
@@ -95,14 +94,6 @@ ui <- dashboardPage(skin = "green",
               ),
               # Horizontal line
               hr(),
-              #Input: Select data table or summary of data set
-              radioButtons(
-                inputId = "display",
-                label = "Display",
-                choices = c("Data Frame", "Summary"),
-                selected = "Data Frame"
-              ),
-              hr(),
               # Example Datasets
               selectInput(
                 inputId = "ex_data_csv",
@@ -115,6 +106,14 @@ ui <- dashboardPage(skin = "green",
                 label = "Assign EPSG Code:",
                 choices = sort(na.omit(epsg_data$code)), #rgdal::make_EPSG()["code"]
                 selected = 4326
+              ),
+              hr(),
+              #Input: Select data table or summary of data set
+              radioButtons(
+                inputId = "display",
+                label = "Display",
+                choices = c("Data Frame", "Column Summary"),
+                selected = "Data Frame"
               )
             ),
             mainPanel = mainPanel(
@@ -215,27 +214,63 @@ tabItem(tabName = "track",
            )
     )
   ),
-  hr(),
+  br(),
   fluidRow(
-    #Input: Select data table or summary of data set
-    column(width = 1,
-           radioButtons(
-             inputId = "display_trk",
-             label = "Display",
-             choices = c("Data Frame", "Summary"),
-             selected = "Data Frame"
-           )
-    ),
-    # Data table or summary
-    column(width = 5, #offset = 1,
-           DT::dataTableOutput(outputId = "contents_trk"),
-           verbatimTextOutput(outputId = "summary_trk")
-    ),
-    column(width = 4, offset = 1,
-           h4(textOutput(outputId = "samp_rate_head")),
-           DT::dataTableOutput(outputId = "summary_samp_rate")
+    # Change color of tab titles from blue to green
+    tags$style(type = "text/css", "li a{color: #15AE57;}"),
+    tabsetPanel(
+      tabPanel(
+        title = "Track",
+        # Input: Select data table or summary of track
+        column(width = 1,
+               br(),
+               br(),
+               radioButtons(
+                 inputId = "display_trk",
+                 label = "Display",
+                 choices = c("Data Frame", "Column Summary"),
+                 selected = "Data Frame"
+               )
+        ),
+        # Data table or summary
+        column(width = 11, #offset = 1,
+               DT::dataTableOutput(outputId = "contents_trk"),
+               verbatimTextOutput(outputId = "summary_trk")
+        )
+      ),
+      tabPanel(
+        title = "Summary of Sampling Rate",
+        # Data table: summary of sampling rate
+        column(width = 12, #offset = 1,
+               h4(textOutput(outputId = "samp_rate_head")),
+               DT::dataTableOutput(outputId = "summary_samp_rate")
+        )
     )
   )
+  )
+  # fluidRow(
+  #   # Data table or summary
+  #   column(width = 5, #offset = 1,
+  #          DT::dataTableOutput(outputId = "contents_trk"),
+  #          verbatimTextOutput(outputId = "summary_trk")
+  #   ),
+  #   # Input: Select data table or summary of track
+  #   column(width = 1,
+  #          br(),
+  #          br(),
+  #          radioButtons(
+  #            inputId = "display_trk",
+  #            label = "Display",
+  #            choices = c("Data Frame", "Summary"),
+  #            selected = "Data Frame"
+  #          )
+  #   ),
+  #   # Data table: summary of sampling rate
+  #   column(width = 4, #offset = 1,
+  #          h4(textOutput(outputId = "samp_rate_head")),
+  #          DT::dataTableOutput(outputId = "summary_samp_rate")
+  #   )
+  # )
 ),
 
 # Add Additional Covariates Tab -------------------------------------------
@@ -441,7 +476,7 @@ output$contents <- DT::renderDataTable({
 })
 # Summary
 output$summary <- renderPrint({
-  if (input$display == "Summary") {
+  if (input$display == "Column Summary") {
     summary(object = csvInput())
   }
 })
@@ -573,10 +608,10 @@ output$x <- renderUI({
   )
   selectizeInput(
     inputId = 'x', 
-    label = "x (location-long):", 
+    label = "Longitude (x):", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign location-long', # 'Please select an option below'
+      placeholder = 'Assign longitude', # 'Please select an option below'
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
@@ -588,10 +623,10 @@ output$y <- renderUI({
   )
   selectizeInput(
     inputId = 'y', 
-    label = "y (location-lat):", 
+    label = "Latitude (y):", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign location-lat',
+      placeholder = 'Assign latitude',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
@@ -603,7 +638,7 @@ output$ts <- renderUI({
   )
   selectizeInput(
     inputId = 'ts', 
-    label = "ts (timestamp):", 
+    label = "Timestamp (t):", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign timestamp',
@@ -618,10 +653,10 @@ output$id <- renderUI({
   )
   selectizeInput(
     inputId = 'id', 
-    label = "id (individual-local-identifier):", 
+    label = "ID:", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign ID',
+      placeholder = 'Group by ID (optional)',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
@@ -763,7 +798,7 @@ output$samp_rate_head <- renderText({
     need(input$ts, '')#,
     #need(input$id, '')
   )
-  "Summary of Sampling Rate (in min)"
+  "Track's Summary of Sampling Rate (in min)"
 })
 
 # Summarize sampling rate (Output)
@@ -782,14 +817,25 @@ output$summary_samp_rate <- DT::renderDataTable({
     sr <- cbind(subset(samp_rate(), select = id), sr)
     DT::datatable(sr,
                   rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE)
+                  options = list(searching = FALSE, paging = FALSE,
+                  columnDefs = list(
+                    list(className = 'dt-right',
+                         targets = 1:(ncol(sr)-1)
+                    )
+                  ))
     )
   } else {
     # One/ no ID selected
-    # Exclude column "unit" (min)
-    DT::datatable(subset(samp_rate(), select = - unit) %>% round(2),
+    # Exclude column "unit" (min) and round
+    sr <- subset(samp_rate(), select = - unit) %>% round(2)
+    DT::datatable(sr,
                   rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE)
+                  options = list(searching = FALSE, paging = FALSE,
+                  columnDefs = list(
+                    list(className = 'dt-right', 
+                         targets = 0:(ncol(sr)-1)
+                    )
+                  ))
     )
   }
 })
@@ -866,20 +912,30 @@ trk_df <- reactive({
 # Display data frame of track
 output$contents_trk <- DT::renderDataTable({
   validate(
-    need(input$x, 'Please assign location-long.'),
-    need(input$y, 'Please assign location-lat.'),
+    need(input$x, 'Please assign longitude.'),
+    need(input$y, 'Please assign latitude.'),
     need(input$ts, 'Please assign timestamp.')#,
     #need(input$id, 'Please assign ID.')
   )
   if (input$display_trk == "Data Frame") {
-    DT::datatable(trk_df(),
+    # Round longitude and latitude (x, y)
+    trk_df_rounded <- trk_df()
+    trk_df_rounded$x_ <- round(trk_df_rounded$x_, 2)
+    trk_df_rounded$y_ <- round(trk_df_rounded$y_, 2)
+    
+    DT::datatable(trk_df_rounded, #trk_df(),
                   rownames = FALSE,
                   options = list(searching = FALSE,
                                  lengthMenu = list(
                                    c(5, 10, 20, 50, 100),
                                    c('5', '10', '20', '50', '100')),
-                                 pageLength = 10)
-                  )
+                                 pageLength = 10,
+                  columnDefs = list(
+                    list(className = 'dt-left', 
+                         targets = 0:(ncol(trk_df_rounded)-1)
+                    )
+                  ))
+    )
   }
 })
 
@@ -891,7 +947,7 @@ output$summary_trk <- renderPrint({
     need(input$ts, '')#,
     #need(input$id, '')
   )
-  if (input$display_trk == "Summary") {
+  if (input$display_trk == "Column Summary") {
     summary(object = trk_df())
   }
 })
@@ -945,7 +1001,7 @@ output$tod <- renderUI({
     choices = c("",
                 "excl. dawn and dusk" = FALSE, 
                 "incl. dawn and dusk" = TRUE),
-    selected = "" #"excl. dawn and dusk"
+    selected = NA #"excl. dawn and dusk"
   )
 })
 # Create initial data frame with environmental covariates
