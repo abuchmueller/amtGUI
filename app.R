@@ -278,28 +278,31 @@ tabItem(tabName = "track",
 
 # Add Additional Covariates Tab -------------------------------------------
 tabItem(tabName = "covariates",
-        fluidRow(
-          column(width = 4, #offset = 1,
-                 # Only retain bursts with a minimum number of relocations
-                 uiOutput(outputId = "min_burst")
-          ),
-          column(width = 4,
-                 # Time of day
-                 uiOutput(outputId = "tod")
-          )
-        ),
         fluidRow(  
-          column(width = 4,
+          column(width = 5,
+                 # Headline
+                 h4(textOutput(outputId = "min_burst_head")),
+                 br(),
+                 # Only retain bursts with a minimum number of relocations
+                 uiOutput(outputId = "min_burst"),
+                 br(),
                  # Headline
                  h4(textOutput(outputId = "bursts_head")),
                  # No. of bursts and observations remaining given minimum no.
                  # of relocations per burst
                  DT::dataTableOutput(outputId = "contents_bursts")
-          )
-        ),
-        br(),
-        fluidRow(
-          column(width = 6,
+          ),
+          column(width = 6, offset = 1,
+                 # Headline
+                 h4(textOutput(outputId = "tod_head")),
+                 # Sub headline (instructions)
+                 h5(textOutput(outputId = "tod_sub_head")),
+                 # Time of day
+                 uiOutput(outputId = "tod"),
+                 br(),
+                 br(),
+                 br(),
+                 br(),
                  # Headline
                  h4(textOutput(outputId = "env_info_head")),
                  # Environmental covariates data frame
@@ -997,6 +1000,14 @@ output$fetch_dr <- renderUI({
 
 # Add Additional Covariates -----------------------------------------------
 
+# Show headline for "Minimum No. of Relocations per Burst" drop down
+output$min_burst_head <- renderText({
+  validate(
+    need(input$rate_min && input$tol_min,
+         'Please resample the track on previous tab first.')
+  )
+  "Restrict Bursts of Resampled Track"
+})
 # Only retain bursts with a minimum number of relocations
 output$min_burst <- renderUI({
   validate(
@@ -1013,7 +1024,6 @@ output$min_burst <- renderUI({
 # Show headline for bursts data frame
 output$bursts_head <- renderText({
   validate(
-    need(trk_resamp(), ''),
     need(input$min_burst, '')
   )
   "No. of Bursts Remaining"
@@ -1022,7 +1032,6 @@ output$bursts_head <- renderText({
 # per burst
 bursts_df <- reactive({
   validate(
-    need(trk_resamp(), ''),
     need(input$min_burst, '')
   )
   # Multiple IDs selected
@@ -1079,11 +1088,25 @@ output$contents_bursts <- DT::renderDataTable({
                 )
   )
 })
+# Show headline for time of day drop down
+output$tod_head <- renderText({
+  validate(
+    need(input$rate_min && input$tol_min, '')
+  )
+  "Time of Day Covariate"
+})
+# Sub headline (instruction when to use)
+output$tod_sub_head <- renderText({
+  validate(
+    need(input$rate_min && input$tol_min, '')
+  )
+  "Applicable when building a model with integrated step selection function only."
+})
 # Time of Day
 output$tod <- renderUI({
   selectInput(
     inputId = "tod",
-    label = "Time of Day (only applicable for ISSF):",
+    label = "Time of Day:",
     choices = c("",
                 "excl. dawn and dusk" = FALSE, 
                 "incl. dawn and dusk" = TRUE),
@@ -1093,7 +1116,7 @@ output$tod <- renderUI({
 # Show headline for environmental covariates data frame
 output$env_info_head <- renderText({
   validate(
-    need(trk_resamp(), '')
+    need(envInput(), 'Please upload map with environmental covariates first.')
   )
   "Environmental Covariates"
 })
