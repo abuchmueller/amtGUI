@@ -302,9 +302,10 @@ tabItem(tabName = "covariates",
                  br(),
                  br(),
                  br(),
-                 br(),
                  # Headline
                  h4(textOutput(outputId = "env_info_head")),
+                 # Sub headline (instructions)
+                 h5(textOutput(outputId = "env_info_sub_head")),
                  # Environmental covariates data frame
                  rHandsontableOutput(outputId = "env_df")
           )
@@ -1028,8 +1029,7 @@ output$bursts_head <- renderText({
   )
   "No. of Bursts Remaining"
 })
-# Table: No. of bursts remaining per ID given minimum no. of relocations 
-# per burst
+# Table: No. of bursts remaining (given minimum no. of relocations per burst)
 bursts_df <- reactive({
   validate(
     need(input$min_burst, '')
@@ -1048,9 +1048,35 @@ bursts_df <- reactive({
       # No. of observations over all bursts remaining per ID
       observations[i] <- sum(freq[pos])
     }
-    # Return data frame
-    b <- data.frame("ID" = trk_resamp()$id, "Bursts" = bursts, "n" = observations)
-    b[order(b$Bursts), ]
+    # Create data frame
+    b <- data.frame("ID" = trk_resamp()$id, "Bursts" = bursts, 
+                    "n" = observations)
+    # Check whether ID(s) with no bursts remain 
+    remove_ids <- trk_resamp()[which(b$Bursts == 0), "id"]
+    # Found ID(s) that need to be removed before model building
+    if (nrow(remove_ids) > 0) {
+      # Convert from tbl to vector to paste in notification below
+      remove_ids <- dplyr::pull(remove_ids, id)
+      # Notification: ID(s) not meeting chosen minimum no. of relocations
+      # per burst
+      showNotification(
+        ui = paste0(
+          "The minimum no. of relocations per burst is too high for the
+          ID(s): ", paste0(remove_ids, collapse = ", "), ". Therefore, those
+          will be removed. If you want to retain those ID(s) please choose a
+          lower value. Alternatively you may choose a different resampling
+          rate, i.e., adjust the interval (in min) to retain the current no.
+          of minimum relocations per burst."),
+        type = "warning",
+        duration = NULL
+        )
+      # Return data frame (ordered by no. of bursts)
+      b[order(b$Bursts), ]
+    } else {
+      # Did not found ID(s) that need to be removed before model building
+      # Return data frame (ordered by no. of bursts)
+      b[order(b$Bursts), ]
+    }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
     # One ID selected
     freq <- table(trk_resamp()$burst_) 
@@ -1059,8 +1085,31 @@ bursts_df <- reactive({
     bursts <- length(freq[pos])
     # No. of observations over all bursts remaining for ID
     observations <- sum(freq[pos])
-    # Return data frame
-    data.frame("ID" = input$id_trk, "Bursts" = bursts, "n" = observations)
+    # Create data frame
+    b <- data.frame("ID" = input$id_trk, "Bursts" = bursts, "n" = observations)
+    # Check whether bursts remain for ID  
+    remove_id <- trk_resamp()[which(b$Bursts == 0), "id"]
+    # Model building not possible since no bursts are left for ID
+    if (nrow(remove_id) == 1) {
+      # Notification: ID not meeting chosen minimum no. of relocations
+      # per burst
+      showNotification(
+        ui = paste0(
+          "The minimum no. of relocations per burst is too high for the
+          ID: ", paste0(remove_id), ". Please choose a lower one. 
+          Alternatively you may choose a different resampling rate, i.e., 
+          adjust the interval (in min) to retain the current no. of minimum 
+          relocations per burst."),
+        type = "warning",
+        duration = NULL
+        )
+      # Return data frame
+      b
+    } else {
+      # Bursts remain for the ID 
+      # Return data frame
+      b
+    }
   } else {
     # No ID selected
     freq <- table(trk_resamp()$burst_) 
@@ -1069,8 +1118,30 @@ bursts_df <- reactive({
     bursts <- length(freq[pos])
     # No. of observations over all bursts remaining for ID
     observations <- sum(freq[pos])
-    # Return data frame
-    data.frame("Bursts" = bursts, "n" = observations)
+    # Create data frame
+    b <- data.frame("Bursts" = bursts, "n" = observations)
+    # Check whether bursts remain  
+    remove <- trk_resamp()[which(b$Bursts == 0), ]
+    # Model building not possible since no bursts are left
+    if (nrow(remove) == 1) {
+      # Notification: not meeting chosen minimum no. of relocations
+      # per burst
+      showNotification(
+        ui = paste0(
+          "The minimum no. of relocations per burst is too high. Please choose 
+          a lower one. Alternatively you may choose a different resampling rate,
+          i.e., adjust the interval (in min) to retain the current no. of 
+          minimum relocations per burst."),
+        type = "warning",
+        duration = NULL
+      )
+      # Return data frame
+      b
+    } else {
+      # Bursts remain 
+      # Return data frame
+      b
+    }
   }
 })
 # Display data frame of bursts
@@ -1120,7 +1191,13 @@ output$env_info_head <- renderText({
   )
   "Environmental Covariates"
 })
-
+# Show sub headline (instructions) for environmental covariates data frame
+output$env_info_sub_head <- renderText({
+  validate(
+    need(envInput(), '')
+  )
+  "Change names of covariates and convert to categorical or continuous variable."
+})
 # Create initial data frame with environmental covariates
 env_info <- reactive({
   validate(
@@ -1311,413 +1388,178 @@ mod_pre <- reactive({
   )
   # Multiple IDs selected (individual models)
   if (length(input$id_trk) > 1) {
+    # Keep all IDs meeting chosen minimum no. of relocations per burst
+    keep_ids <- bursts_df()[which(bursts_df()$Bursts != 0), "ID"]
+    t_res <- trk_resamp()[trk_resamp()$id %in% keep_ids, ]
     
     if (input$model == "Resource Selection Function") {
       validate(
         need(input$rand_points, 'Please set no. of random points.')
       )
-      # Define data frame for usage below
-      t_res <- trk_resamp()
-      # Test wether chosen minimum no. of relocations per burst is too high 
-      # for some IDs
-      removed_ids <- vector()
-      j = 0
-      for (i in 1:nrow(t_res)) {
-        min_burst <- t_res$track[[i]]
-        freq <- table(min_burst["burst_"]) 
-        pos <- which(freq >= input$min_burst)
-        # No observations given min. no. of relocations per burst
-        if (length(pos) == 0) {
-          j = j + 1
-          # Assign empty tibble (those tibbles will be removed below)
-          t_res$track[[i]] <- tibble()
-          # Store ID(s) in vector (for notification displayed to the user)
-          removed_ids[j] <- t_res$id[i]
-        }
-      }
-      # All IDs meet chosen minimum no. of relocations per burst
-      if (length(removed_ids) == 0) {
-        t_res <- t_res %>% mutate(points = lapply(track, function(x) {
-          x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
-            #time_of_day(include.crepuscule = FALSE) %>% 
-            random_points(n = input$rand_points) %>% 
-            extract_covariates(env(), where = "both") #%>% 
-            # mutate(land_use = factor(land_use))
-        }))
-        # Convert environmental covariates to factor or numeric
-        # Loop through IDs
-        for (j in 1:nrow(t_res)) {
-          # Loop through environmental covariates
-          for (i in 1:length(names(env()))) {
-            # Convert to factor
-            if (env_info()$Categorical[i] && 
-                is.numeric(t_res$points[[j]][[names(env())[i]]])) {
-              t_res$points[[j]][[names(env())[i]]] <- as.factor(
-                t_res$points[[j]][[names(env())[i]]]
+      t_res <- t_res %>% mutate(points = lapply(track, function(x) {
+        x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
+          random_points(n = input$rand_points) %>% 
+          extract_covariates(env(), where = "both")
+      }))
+      # Convert environmental covariates to factor or numeric
+      # Loop through IDs
+      for (j in 1:nrow(t_res)) {
+        # Loop through environmental covariates
+        for (i in 1:length(names(env()))) {
+          # Convert to factor
+          if (env_info()$Categorical[i] && 
+              is.numeric(t_res$points[[j]][[names(env())[i]]])) {
+            t_res$points[[j]][[names(env())[i]]] <- as.factor(
+              t_res$points[[j]][[names(env())[i]]]
+            )
+          } else if (!env_info()$Categorical[i] && 
+                     is.factor(t_res$points[[j]][[names(env())[i]]])) {
+            # Convert to numeric
+            t_res$points[[j]][[names(env())[i]]] <- as.numeric(
+              levels(t_res$points[[j]][[names(env())[i]]]
               )
-            } else if (!env_info()$Categorical[i] && 
-                       is.factor(t_res$points[[j]][[names(env())[i]]])) {
-              # Convert to numeric
-              t_res$points[[j]][[names(env())[i]]] <- as.numeric(
-                levels(t_res$points[[j]][[names(env())[i]]]
-                )
-              )[t_res$points[[j]][[names(env())[i]]]]
-            }
+            )[t_res$points[[j]][[names(env())[i]]]]
           }
         }
-        t_res
-      } else if (length(removed_ids) > 0) {
-        # Remove ID(s) not meeting chosen minimum no. of relocations per burst
-        showNotification(
-          ui = paste0(
-            "The minimum no. of relocations per burst is too high for the 
-            ID(s): ", paste0(removed_ids, collapse = ", "), ". Therefore, those 
-            were removed. If you want to retain those ID(s) please choose a 
-            lower value. Alternatively you may choose a different resampling 
-            rate, i.e., adjust the interval (in min) to retain the current no.
-            of minimum relocations per burst."),
-          type = "warning",
-          duration = NULL
-        )
-        t_res <- t_res %>% 
-          # remove IDs not meeting min no. of relocations per burst
-          filter(purrr::map_int(track, nrow) > 0) %>% # 100
-          mutate(points = lapply(track, function(x) {
-          x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
-            #time_of_day(include.crepuscule = FALSE) %>% 
-            random_points(n = input$rand_points) %>% 
-            extract_covariates(env(), where = "both") #%>% 
-            # mutate(land_use = factor(land_use))
-        }))
-        # Convert environmental covariates to factor or numeric
-        # Loop through IDs
-        for (j in 1:nrow(t_res)) {
-          # Loop through environmental covariates
-          for (i in 1:length(names(env()))) {
-            # Convert to factor
-            if (env_info()$Categorical[i] && 
-                is.numeric(t_res$points[[j]][[names(env())[i]]])) {
-              t_res$points[[j]][[names(env())[i]]] <- as.factor(
-                t_res$points[[j]][[names(env())[i]]]
-              )
-            } else if (!env_info()$Categorical[i] && 
-                       is.factor(t_res$points[[j]][[names(env())[i]]])) {
-              # Convert to numeric
-              t_res$points[[j]][[names(env())[i]]] <- as.numeric(
-                levels(t_res$points[[j]][[names(env())[i]]]
-                )
-              )[t_res$points[[j]][[names(env())[i]]]]
-            }
-          }
-        }
-        t_res
       }
+      t_res
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
         need(input$rand_stps, 'Please set no. of random steps.')
       )
-      # Define data frame for usage below
-      t_res <- trk_resamp()
-      # Test wether chosen minimum no. of relocations per burst is too high 
-      # for some IDs
-      removed_ids <- vector()
-      j = 0
-      for (i in 1:nrow(t_res)) {
-        min_burst <- t_res$track[[i]]
-        freq <- table(min_burst["burst_"]) 
-        pos <- which(freq >= input$min_burst)
-        # No observations given min. no. of relocations per burst
-        if (length(pos) == 0) {
-          j = j + 1
-          # Assign empty tibble (those tibbles will be removed below)
-          t_res$track[[i]] <- tibble()
-          # Store ID(s) in vector (for notification displayed to the user)
-          removed_ids[j] <- t_res$id[i]
-        }
-      }
-      # All IDs meet chosen minimum no. of relocations per burst
-      if (length(removed_ids) == 0) {
-        # Time of day is not selected
-        if (input$tod == '') {
-          t_res <- t_res %>%
-            mutate(steps = lapply(track, function(x) {
-              x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
-                amt::steps_by_burst() %>% 
-                amt::random_steps(n = input$rand_stps) %>% 
-                amt::extract_covariates(env(), where = "both") %>% 
-                mutate(log_sl_ = log(sl_), 
-                       cos_ta_ = cos(ta_)#, 
-                       #land_use_end = factor(land_use_end)
+      # Time of day is not selected
+      if (input$tod == '') {
+        t_res <- t_res %>%
+          mutate(steps = lapply(track, function(x) {
+            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+              amt::steps_by_burst() %>% 
+              amt::random_steps(n = input$rand_stps) %>% 
+              amt::extract_covariates(env(), where = "both") %>% 
+              mutate(log_sl_ = log(sl_), 
+                     cos_ta_ = cos(ta_)
+              )
+          }))
+        # Convert environmental covariates to factor or numeric
+        for (j in 1:nrow(t_res)) {
+          for (i in 1:length(names(env()))) {
+            # Convert to factor
+            if (env_info()$Categorical[i] && 
+                is.numeric(
+                  t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
+              # Step start (_start)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_start")]] <- as.factor(
+                  t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
                 )
-            }))
-          # Convert environmental covariates to factor or numeric
-          for (j in 1:nrow(t_res)) {
-            for (i in 1:length(names(env()))) {
-              # Convert to factor
-              if (env_info()$Categorical[i] && 
-                  is.numeric(
-                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
-                # Step start (_start)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_start")]] <- as.factor(
-                    t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
-                  )
-                # Step end (_end)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_end")]] <- as.factor(
-                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                  )
-              } else if (!env_info()$Categorical[i] && 
-                         is.factor(t_res$steps[[j]][[
-                             paste0(names(env())[i], "_end")]])) {
-                # Convert to numeric
-                # Step start (_start)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_start")]] <- as.numeric(
-                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
-                    )
-                  )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
-                # Step end (_end)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_end")]] <- as.numeric(
-                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                    )
-                  )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
-              }
-            }
-          }
-          t_res
-        } else {
-          # A time of day option is selected 
-          t_res <- t_res %>% 
-            mutate(steps = lapply(track, function(x) {
-              x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
-                amt::steps_by_burst() %>% 
-                amt::random_steps(n = input$rand_stps) %>% 
-                amt::extract_covariates(env(), where = "both") %>% 
-                mutate(log_sl_ = log(sl_), 
-                       cos_ta_ = cos(ta_)#, 
-                       #land_use_end = factor(land_use_end)
-                ) %>% 
-                time_of_day(include.crepuscule = input$tod)
-            }))
-          # Convert environmental covariates to factor or numeric
-          for (j in 1:nrow(t_res)) {
-            for (i in 1:length(names(env()))) {
-              # Convert to factor
-              if (env_info()$Categorical[i] && 
-                  is.numeric(
-                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
-                # Step start (_start)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_start")]] <- as.factor(
-                    t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
-                  )
-                # Step end (_end)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_end")]] <- as.factor(
-                    t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                  )
-              } else if (!env_info()$Categorical[i] && 
-                         is.factor(t_res$steps[[j]][[
+              # Step end (_end)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_end")]] <- as.factor(
+                  t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                )
+            } else if (!env_info()$Categorical[i] && 
+                       is.factor(t_res$steps[[j]][[
                            paste0(names(env())[i], "_end")]])) {
-                # Convert to numeric
-                # Step start (_start)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_start")]] <- as.numeric(
-                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
-                    )
-                  )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
-                # Step end (_end)
-                t_res$steps[[j]][[
-                  paste0(names(env())[i], "_end")]] <- as.numeric(
-                    levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                    )
-                  )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
-              }
+              # Convert to numeric
+              # Step start (_start)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_start")]] <- as.numeric(
+                  levels(t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                  )
+                )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
+              # Step end (_end)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_end")]] <- as.numeric(
+                  levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                  )
+                )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
             }
           }
-          t_res
         }
-      } else if (length(removed_ids) > 0) {
-        # Remove ID(s) not meeting chosen minimum no. of relocations per burst
-        showNotification(
-          ui = paste0(
-            "The minimum no. of relocations per burst is too high for the 
-            ID(s): ", paste0(removed_ids, collapse = ", "), ". Therefore, those 
-            were removed. If you want to retain those ID(s) please choose a 
-            lower value. Alternatively you may choose a different resampling 
-            rate, i.e., adjust the interval (in min) to retain the current no.
-            of minimum relocations per burst."),
-          type = "warning",
-          duration = NULL
-          )
-          # Time of day is not selected
-          if (input$tod == '') {
-            t_res <- t_res %>% 
-              # remove IDs not meeting min no. of relocations per burst
-              filter(purrr::map_int(track, nrow) > 0) %>% # 100
-              mutate(steps = lapply(track, function(x) {
-                x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
-                  amt::steps_by_burst() %>% 
-                  amt::random_steps(n = input$rand_stps) %>% 
-                  amt::extract_covariates(env(), where = "both") %>% 
-                  mutate(log_sl_ = log(sl_), 
-                         cos_ta_ = cos(ta_)#, 
-                         #land_use_end = factor(land_use_end)
+        t_res
+      } else {
+        # A time of day option is selected 
+        t_res <- t_res %>% 
+          mutate(steps = lapply(track, function(x) {
+            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+              amt::steps_by_burst() %>% 
+              amt::random_steps(n = input$rand_stps) %>% 
+              amt::extract_covariates(env(), where = "both") %>% 
+              mutate(log_sl_ = log(sl_), 
+                     cos_ta_ = cos(ta_)
+              ) %>%
+              # Add time of day
+              time_of_day(include.crepuscule = input$tod)
+          }))
+        # Convert environmental covariates to factor or numeric
+        for (j in 1:nrow(t_res)) {
+          for (i in 1:length(names(env()))) {
+            # Convert to factor
+            if (env_info()$Categorical[i] && 
+                is.numeric(
+                  t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
+              # Step start (_start)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_start")]] <- as.factor(
+                  t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
+                )
+              # Step end (_end)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_end")]] <- as.factor(
+                  t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                )
+            } else if (!env_info()$Categorical[i] && 
+                       is.factor(t_res$steps[[j]][[
+                         paste0(names(env())[i], "_end")]])) {
+              # Convert to numeric
+              # Step start (_start)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_start")]] <- as.numeric(
+                  levels(t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
                   )
-              }))
-            # Convert environmental covariates to factor or numeric
-            for (j in 1:nrow(t_res)) {
-              for (i in 1:length(names(env()))) {
-                # Convert to factor
-                if (env_info()$Categorical[i] && 
-                    is.numeric(
-                      t_res$steps[[j]][[
-                        paste0(names(env())[i], "_end")]])) {
-                  # Step start (_start)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_start")]] <- as.factor(
-                      t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
-                    )
-                  # Step end (_end)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_end")]] <- as.factor(
-                      t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                    )
-                } else if (!env_info()$Categorical[i] && 
-                           is.factor(t_res$steps[[j]][[
-                             paste0(names(env())[i], "_end")]])) {
-                  # Convert to numeric
-                  # Step start (_start)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_start")]] <- as.numeric(
-                      levels(t_res$steps[[j]][[
-                        paste0(names(env())[i], "_start")]]
-                      )
-                    )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
-                  # Step end (_end)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_end")]] <- as.numeric(
-                      levels(t_res$steps[[j]][[
-                        paste0(names(env())[i], "_end")]]
-                      )
-                    )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
-                }
-              }
+                )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
+              # Step end (_end)
+              t_res$steps[[j]][[
+                paste0(names(env())[i], "_end")]] <- as.numeric(
+                  levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
+                  )
+                )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
             }
-            t_res
-          } else {
-            # A time of day option is selected 
-            t_res <- t_res %>% 
-              # remove IDs not meeting min no. of relocations per burst
-              filter(purrr::map_int(track, nrow) > 0) %>% # 100
-              mutate(steps = lapply(track, function(x) {
-                x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
-                  amt::steps_by_burst() %>% 
-                  amt::random_steps(n = input$rand_stps) %>% 
-                  amt::extract_covariates(env(), where = "both") %>% 
-                  mutate(log_sl_ = log(sl_), 
-                         cos_ta_ = cos(ta_)#, 
-                         #land_use_end = factor(land_use_end)
-                  ) %>% 
-                  time_of_day(include.crepuscule = input$tod)
-              }))
-            # Convert environmental covariates to factor or numeric
-            for (j in 1:nrow(t_res)) {
-              for (i in 1:length(names(env()))) {
-                # Convert to factor
-                if (env_info()$Categorical[i] && 
-                    is.numeric(
-                      t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
-                  # Step start (_start)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_start")]] <- as.factor(
-                      t_res$steps[[j]][[paste0(names(env())[i], "_start")]]
-                    )
-                  # Step end (_end)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_end")]] <- as.factor(
-                      t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                    )
-                } else if (!env_info()$Categorical[i] && 
-                           is.factor(t_res$steps[[j]][[
-                             paste0(names(env())[i], "_end")]])) {
-                  # Convert to numeric
-                  # Step start (_start)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_start")]] <- as.numeric(
-                      levels(t_res$steps[[j]][[
-                        paste0(names(env())[i], "_start")]]
-                      )
-                    )[t_res$steps[[j]][[paste0(names(env())[i], "_start")]]]
-                  # Step end (_end)
-                  t_res$steps[[j]][[
-                    paste0(names(env())[i], "_end")]] <- as.numeric(
-                      levels(t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
-                      )
-                    )[t_res$steps[[j]][[paste0(names(env())[i], "_end")]]]
-                }
-              }
-            }
-            t_res
-          }  
+          }
+        }
+        t_res
       }
     }
-    
   } else {
     # One/ no ID selected (single model)
     if (input$model == "Resource Selection Function") {
       validate(
-        need(input$rand_points, 'Please set no. of random points.'),
-        need(nrow(trk_resamp() %>% 
-                    filter_min_n_burst(min_n = input$min_burst)) != 0,
- 'The minimum no. of relocations per burst is too high, please choose a lower 
- one. Alternatively you may choose a different resampling rate, i.e., 
- adjust the interval (in min) to keep the current no. of minimum relocations 
- per burst.')
+        need(input$rand_points, 'Please set no. of random points.')
       )
-      # Time of day is not selected
-      # random_points removes tod, adding tod afterwards doesn't work since
-      # tod requires class track_xyt or steps_xyt
-      #if (input$tod == "") {
-        set.seed(12345)
-        t_res <- trk_resamp() %>% 
-          filter_min_n_burst(min_n = input$min_burst) %>%
-          # time_of_day(include.crepuscule = input$tod) %>% 
-          random_points(n = input$rand_points) %>% 
-          extract_covariates(env(), where = "both") #%>%
-          # Add renamed land use column ("lu") and convert to factor 
-          #mutate(land_use = factor(land_use))
-        
-        # Convert environmental covariates to factor or numeric
-        # where = "both" doesn't apply to random points unlike 
-        # random steps (ISSF) i.e. we don't need to convert point start and end 
-        for (i in 1:length(names(env()))) {
-          # Convert to factor
-          if (env_info()$Categorical[i] &&
-              is.numeric(t_res[[names(env())[i]]])) {
-            t_res[[names(env())[i]]] <- as.factor(t_res[[names(env())[i]]])
-          } else if (!env_info()$Categorical[i] &&
-                     is.factor(t_res[[names(env())[i]]])) {
-            # Convert to numeric
-            t_res[[names(env())[i]]] <- as.numeric(
-              levels(t_res[[names(env())[i]]]))[t_res[[names(env())[i]]]]
-          }
-        }
-        t_res
+      set.seed(12345)
+      t_res <- trk_resamp() %>% 
+        filter_min_n_burst(min_n = input$min_burst) %>% 
+        random_points(n = input$rand_points) %>% 
+        extract_covariates(env(), where = "both")
       
+      # Convert environmental covariates to factor or numeric
+      # where = "both" doesn't apply to random points unlike 
+      # random steps (ISSF) i.e. we don't need to convert point start and end 
+      for (i in 1:length(names(env()))) {
+        # Convert to factor
+        if (env_info()$Categorical[i] &&
+            is.numeric(t_res[[names(env())[i]]])) {
+          t_res[[names(env())[i]]] <- as.factor(t_res[[names(env())[i]]])
+        } else if (!env_info()$Categorical[i] &&
+                   is.factor(t_res[[names(env())[i]]])) {
+          # Convert to numeric
+          t_res[[names(env())[i]]] <- as.numeric(
+            levels(t_res[[names(env())[i]]]))[t_res[[names(env())[i]]]]
+        }
+      }
+      t_res
     } else if (input$model == "Integrated Step Selection Function") {
-      # Test whether minimum no. of relocations per burst is too high (no 
-      # observations left) 
       validate(
-        need(input$rand_stps, 'Please set no. of random steps.'),
-        need(nrow(trk_resamp() %>% 
-                    filter_min_n_burst(min_n = input$min_burst)) != 0,
- 'The minimum no. of relocations per burst is too high, please choose a lower 
- one. Alternatively you may choose a different resampling rate, i.e., 
- adjust the interval (in min) to keep the current no. of minimum relocations 
- per burst.')
+        need(input$rand_stps, 'Please set no. of random steps.')
       )
       # Time of day is not selected
       if (input$tod == '') {
@@ -1728,10 +1570,8 @@ mod_pre <- reactive({
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
-                 cos_ta_ = cos(ta_)#, 
-                 #land_use_end = factor(land_use_end)
-                 )
-        
+                 cos_ta_ = cos(ta_)
+          )
         # Convert environmental covariates to factor or numeric
         for (i in 1:length(names(env()))) {
           # Convert to factor
@@ -1762,7 +1602,6 @@ mod_pre <- reactive({
           }
         }
         t_res
-        
       } else {
         # A time of day option is selected 
         set.seed(12345)
@@ -1772,9 +1611,9 @@ mod_pre <- reactive({
           random_steps(n = input$rand_stps) %>% 
           extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
-                 cos_ta_ = cos(ta_)#, 
-                 #land_use_end = factor(land_use_end)
-                 ) %>%
+                 cos_ta_ = cos(ta_)
+          ) %>%
+          # Add time of day
           time_of_day(include.crepuscule = input$tod)
         
         # Convert environmental covariates to factor or numeric
