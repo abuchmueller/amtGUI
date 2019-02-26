@@ -218,35 +218,38 @@ tabItem(tabName = "track",
   fluidRow(
     # Change color of tab titles from blue to green
     tags$style(type = "text/css", "li a{color: #15AE57;}"),
-    tabsetPanel(
-      tabPanel(
-        title = "Track",
-        # Input: Select data table or summary of track
-        column(width = 1,
-               br(),
-               br(),
-               radioButtons(
-                 inputId = "display_trk",
-                 label = "Display",
-                 choices = c("Data Frame", "Column Summary"),
-                 selected = "Data Frame"
-               )
+    column(width = 12,
+      # Tabs within fluid row
+      tabsetPanel(
+        tabPanel(
+          title = "Track",
+          # Input: Select data table or summary of track
+          column(width = 1,
+                 br(),
+                 br(),
+                 radioButtons(
+                   inputId = "display_trk",
+                   label = "Display",
+                   choices = c("Data Frame", "Column Summary"),
+                   selected = "Data Frame"
+                 )
+          ),
+          # Data table or summary
+          column(width = 11, #offset = 1,
+                 DT::dataTableOutput(outputId = "contents_trk"),
+                 verbatimTextOutput(outputId = "summary_trk")
+          )
         ),
-        # Data table or summary
-        column(width = 11, #offset = 1,
-               DT::dataTableOutput(outputId = "contents_trk"),
-               verbatimTextOutput(outputId = "summary_trk")
+        tabPanel(
+          title = "Summary of Sampling Rate",
+          # Data table: summary of sampling rate
+          column(width = 12, #offset = 1,
+                 h4(textOutput(outputId = "samp_rate_head")),
+                 DT::dataTableOutput(outputId = "summary_samp_rate")
+          )
         )
-      ),
-      tabPanel(
-        title = "Summary of Sampling Rate",
-        # Data table: summary of sampling rate
-        column(width = 12, #offset = 1,
-               h4(textOutput(outputId = "samp_rate_head")),
-               DT::dataTableOutput(outputId = "summary_samp_rate")
-        )
+      )
     )
-  )
   )
   # fluidRow(
   #   # Data table or summary
@@ -278,15 +281,28 @@ tabItem(tabName = "covariates",
         fluidRow(
           column(width = 4, #offset = 1,
                  # Only retain bursts with a minimum number of relocations
-                 uiOutput(outputId = "min_burst"),
-                 # Time of Day
+                 uiOutput(outputId = "min_burst")
+          ),
+          column(width = 4,
+                 # Time of day
                  uiOutput(outputId = "tod")
-                 )
+          )
         ),
-        hr(),
+        fluidRow(  
+          column(width = 4,
+                 # Headline
+                 h4(textOutput(outputId = "bursts_head")),
+                 # No. of bursts and observations remaining given minimum no.
+                 # of relocations per burst
+                 DT::dataTableOutput(outputId = "contents_bursts")
+          )
+        ),
+        br(),
         fluidRow(
           column(width = 6,
-                 h4("Environmental Covariates"),
+                 # Headline
+                 h4(textOutput(outputId = "env_info_head")),
+                 # Environmental covariates data frame
                  rHandsontableOutput(outputId = "env_df")
           )
         )
@@ -593,7 +609,7 @@ output$contents_env <- DT::renderDataTable({
 
 
 # Update variable selection based on uploaded data set
-# Show head line for track menu in sidebar
+# Show headline for track menu in sidebar
 output$track_head <- renderText({
   if (!is.null(csvInput())) {
     "Select Track Variables"
@@ -779,7 +795,7 @@ samp_rate <- reactive({
     need(input$ts, '')
   )
   # Multiple IDs selected
- if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+ if (length(input$id_trk) > 1) {
    # trk_multi <- group_by(trk(), id) %>% nest()
    # map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
    trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>%
@@ -810,7 +826,7 @@ output$summary_samp_rate <- DT::renderDataTable({
     #need(input$id, '')
   )
   # Multiple IDs selected
-  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+  if (length(input$id_trk) > 1) {
     # Round results excluding columns "id" and "unit" (min)
     sr <- subset(samp_rate(), select = - c(id, unit)) %>% round(2)
     # Add id column
@@ -847,7 +863,7 @@ trk_resamp <- reactive({
     need(input$tol_min, '')
   )
   # Multiple IDs selected
-  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+  if (length(input$id_trk) > 1) {
     trk() %>%
       mutate(track = map(track, function(x) {
         x %>% amt::track_resample(rate = minutes(input$rate_min),
@@ -978,6 +994,7 @@ output$fetch_dr <- renderUI({
   )
 })
 
+
 # Add Additional Covariates -----------------------------------------------
 
 # Only retain bursts with a minimum number of relocations
@@ -993,17 +1010,94 @@ output$min_burst <- renderUI({
     step = 1
   )
 })
+# Show headline for bursts data frame
+output$bursts_head <- renderText({
+  validate(
+    need(trk_resamp(), ''),
+    need(input$min_burst, '')
+  )
+  "No. of Bursts Remaining"
+})
+# Table: No. of bursts remaining per ID given minimum no. of relocations 
+# per burst
+bursts_df <- reactive({
+  validate(
+    need(trk_resamp(), ''),
+    need(input$min_burst, '')
+  )
+  # Multiple IDs selected
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    bursts <- vector()
+    observations <- vector()
+    
+    for (i in 1:nrow(trk_resamp())) {
+      min_burst <- trk_resamp()$track[[i]]
+      freq <- table(min_burst$burst_) 
+      pos <- which(freq >= input$min_burst)
+      # No. of bursts remaining per ID 
+      bursts[i] <- length(freq[pos])
+      # No. of observations over all bursts remaining per ID
+      observations[i] <- sum(freq[pos])
+    }
+    # Return data frame
+    b <- data.frame("ID" = trk_resamp()$id, "Bursts" = bursts, "n" = observations)
+    b[order(b$Bursts), ]
+  } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
+    # One ID selected
+    freq <- table(trk_resamp()$burst_) 
+    pos <- which(freq >= input$min_burst)
+    # No. of bursts remaining for ID 
+    bursts <- length(freq[pos])
+    # No. of observations over all bursts remaining for ID
+    observations <- sum(freq[pos])
+    # Return data frame
+    data.frame("ID" = input$id_trk, "Bursts" = bursts, "n" = observations)
+  } else {
+    # No ID selected
+    freq <- table(trk_resamp()$burst_) 
+    pos <- which(freq >= input$min_burst)
+    # No. of bursts remaining for ID 
+    bursts <- length(freq[pos])
+    # No. of observations over all bursts remaining for ID
+    observations <- sum(freq[pos])
+    # Return data frame
+    data.frame("Bursts" = bursts, "n" = observations)
+  }
+})
+# Display data frame of bursts
+output$contents_bursts <- DT::renderDataTable({
+  validate(
+    need(bursts_df(), '')
+  )
+  DT::datatable(bursts_df(),
+                rownames = FALSE,
+                options = list(searching = FALSE,
+                               lengthMenu = list(
+                                 c(5, 10, 20, 50, 100),
+                                 c('5', '10', '20', '50', '100')),
+                               pageLength = 10
+                )
+  )
+})
 # Time of Day
 output$tod <- renderUI({
   selectInput(
     inputId = "tod",
-    label = "Time of Day:",
+    label = "Time of Day (only applicable for ISSF):",
     choices = c("",
                 "excl. dawn and dusk" = FALSE, 
                 "incl. dawn and dusk" = TRUE),
     selected = NA #"excl. dawn and dusk"
   )
 })
+# Show headline for environmental covariates data frame
+output$env_info_head <- renderText({
+  validate(
+    need(trk_resamp(), '')
+  )
+  "Environmental Covariates"
+})
+
 # Create initial data frame with environmental covariates
 env_info <- reactive({
   validate(
@@ -1015,6 +1109,7 @@ env_info <- reactive({
                "Categorical" = rep(TRUE, length(names(envInput()))),
                stringsAsFactors = FALSE)
   } else {
+    # Convert handsontable data to R object
     hot_to_r(input$env_df)
   }
 })
