@@ -320,8 +320,13 @@ tabItem(tabName = "plot",
 # Modeling Tab ------------------------------------------------------------
 
 tabItem(tabName = "model",
+  # Enable to clear all inputs of modeling tab by "clear model" button
+  useShinyjs(),
+  div(id = "modeling_tab",
   fluidRow(
     column(width = 2, #offset = 1,
+           # useShinyjs(),
+           # div(id = "modeling_tab",
            radioButtons(
              inputId = "model",
              label = h4("Choose a Model"),
@@ -336,6 +341,8 @@ tabItem(tabName = "model",
            uiOutput(outputId = "rand_points"),
            # Fit model button
            actionButton("fit_button", "Fit Model", icon = icon("poll"), width = "112%"),
+           # Clear button
+           actionButton("clear_button", "Clear Model", icon = icon("poll"), width = "112%"),
            br(),
            # Download button for model output
            downloadButton("downloadData", "Download")
@@ -392,7 +399,8 @@ tabItem(tabName = "model",
            # Select 5th interaction
            uiOutput(outputId = "inter_5")
     )
-  ),
+  )
+  ), # End of clear inputs  
   br(), # break
   hr(), # horizontal line not showing for some reason???
   fluidRow(
@@ -401,9 +409,7 @@ tabItem(tabName = "model",
         #plotOutput(outputId = "mod_plot")
     )
   )
-  )
-
-
+)
 
 # End UI!!!
 )))
@@ -733,7 +739,6 @@ trk <- reactive({
       need(input$x, ''),
       need(input$y, ''),
       need(input$ts, '')
-      #need(input$id_trk, "Please select at least one ID.")
     )
   
   # No ID selected (one model for all animals)
@@ -799,7 +804,7 @@ samp_rate <- reactive({
     need(input$ts, '')
   )
   # Multiple IDs selected
- if (length(input$id_trk) > 1) {
+ if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
    # trk_multi <- group_by(trk(), id) %>% nest()
    # map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
    trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>%
@@ -815,8 +820,7 @@ output$samp_rate_head <- renderText({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, '')#,
-    #need(input$id, '')
+    need(input$ts, '')
   )
   "Track's Summary of Sampling Rate (in min)"
 })
@@ -826,23 +830,24 @@ output$summary_samp_rate <- DT::renderDataTable({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, '')#,
-    #need(input$id, '')
+    need(input$ts, '')
   )
   # Multiple IDs selected
-  if (length(input$id_trk) > 1) {
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     # Round results excluding columns "id" and "unit" (min)
     sr <- subset(samp_rate(), select = - c(id, unit)) %>% round(2)
     # Add id column
     sr <- cbind(subset(samp_rate(), select = id), sr)
     DT::datatable(sr,
                   rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE,
-                  columnDefs = list(
-                    list(className = 'dt-right',
-                         targets = 1:(ncol(sr)-1)
-                    )
-                  ))
+                  options = list(searching = FALSE, paging = FALSE#,
+                                 # Right align columns except 1st one
+                                 # columnDefs = list(
+                                 #   list(className = 'dt-right',
+                                 #        targets = 1:(ncol(sr)-1)
+                                 #   )
+                                 # )
+                  )
     )
   } else {
     # One/ no ID selected
@@ -850,12 +855,14 @@ output$summary_samp_rate <- DT::renderDataTable({
     sr <- subset(samp_rate(), select = - unit) %>% round(2)
     DT::datatable(sr,
                   rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE,
-                  columnDefs = list(
-                    list(className = 'dt-right', 
-                         targets = 0:(ncol(sr)-1)
-                    )
-                  ))
+                  options = list(searching = FALSE, paging = FALSE#,
+                                 # Right align columns
+                                 # columnDefs = list(
+                                 #   list(className = 'dt-right',
+                                 #        targets = 0:(ncol(sr)-1)
+                                 #   )
+                                 # )
+                  )
     )
   }
 })
@@ -867,7 +874,7 @@ trk_resamp <- reactive({
     need(input$tol_min, '')
   )
   # Multiple IDs selected
-  if (length(input$id_trk) > 1) {
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     trk() %>%
       mutate(track = map(track, function(x) {
         x %>% amt::track_resample(rate = minutes(input$rate_min),
@@ -950,11 +957,13 @@ output$contents_trk <- DT::renderDataTable({
                                    c(5, 10, 20, 50, 100),
                                    c('5', '10', '20', '50', '100')),
                                  pageLength = 10,
-                  columnDefs = list(
-                    list(className = 'dt-left', 
-                         targets = 0:(ncol(trk_df_rounded)-1)
-                    )
-                  ))
+                                 # Left align columns
+                                 columnDefs = list(
+                                   list(className = 'dt-left', 
+                                        targets = 0:(ncol(trk_df_rounded)-1)
+                                   )
+                                 )
+                  )
     )
   }
 })
@@ -1387,7 +1396,7 @@ mod_pre <- reactive({
     need(input$model != 'None', '')
   )
   # Multiple IDs selected (individual models)
-  if (length(input$id_trk) > 1) {
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     # Keep all IDs meeting chosen minimum no. of relocations per burst
     keep_ids <- bursts_df()[which(bursts_df()$Bursts != 0), "ID"]
     t_res <- trk_resamp()[trk_resamp()$id %in% keep_ids, ]
@@ -1654,7 +1663,7 @@ mod_pre <- reactive({
 # Get variable names
 mod_pre_var <- reactive({
   # Multiple IDs selected (individual models)
-  if (length(input$id_trk) > 1) {
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     if (input$model == "Resource Selection Function") {
       # column names only using colnames() doesn't work here!
       mod_pre()$points[[1]] %>% head(n=0)
@@ -1710,13 +1719,29 @@ fit <- eventReactive(input$fit_button, {
   mod()
 })
 
+# Clear model button (works for inputs only)
+observeEvent(input$clear_button, {
+  reset("modeling_tab")
+})
+
+# Observe fit model and clear model buttons for model output
+values_model <- reactiveValues(model_state = NULL)
+
+observeEvent(input$fit_button, {
+  values_model$model_state <- 'fit'
+})
+observeEvent(input$clear_button, {
+  values_model$model_state <- 'clear'
+})
+
 # Fit model
 mod <- reactive({
   validate(
-    need(input$model != 'None', 'Please choose a model.')
+    need(input$model != 'None', 'Please choose a model.'),
+    need(values_model$model_state == 'fit', '')
   )
   # Multiple IDs selected (individual models)
-  if (length(input$id_trk) > 1) {
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
@@ -1728,7 +1753,7 @@ mod <- reactive({
         points, ~ amt::fit_rsf(., as.formula(paste("case_ ~", mod_all_var())))))
       # Data frame with coefficients
       rsf_multi %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
-        select(id, coef) %>% unnest() %>% as.data.frame()
+        select(id, coef) %>% unnest() %>% as.tibble()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
@@ -1743,18 +1768,20 @@ mod <- reactive({
               )))))
       # Data frame with coefficients
       issf_multi_fit %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
-        select(id, coef) %>% unnest() %>% as.data.frame()
-  }
-    
+        select(id, coef) %>% unnest() %>% as.tibble()
+    }
   } else {
     # One/ no ID selected (single model)
     # Fit RSF (Resource Selection Function; logistic regression)
     if (input$model == "Resource Selection Function") {
+      validate(
+        need(input$mod_var, 'Please select model variables.')
+      )
       set.seed(12345)
       rsf_one_fit <- mod_pre() %>% 
         fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
       # Data frame with coefficients
-      broom::tidy(rsf_one_fit$model) %>% as.data.frame()
+      broom::tidy(rsf_one_fit$model) %>% as.tibble()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
@@ -1766,7 +1793,7 @@ mod <- reactive({
           as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"))
           )
       # Data frame with coefficients
-      broom::tidy(issf_one_fit$model) %>% as.data.frame()
+      broom::tidy(issf_one_fit$model) %>% as.tibble()
     }
   }
 })
@@ -1774,10 +1801,18 @@ mod <- reactive({
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
   validate(
-    need(input$model != "None", '')
+    need(input$model != "None", ''),
+    need(values_model$model_state == 'fit', '')
   )
   # Dependent on fit button above
-  DT::datatable(cbind(fit()[, 1:2], round(fit()[, 3:ncol(fit())], 4)),
+  DT::datatable(
+    cbind(
+      # Do not round 1st and 2nd column if ID's are selected,
+      # do not round 1st column if one/ no ID is selected
+      fit()[, -((ncol(fit()) - 5):ncol(fit()))],
+      # Round last 6 columns of data frame
+      round(fit()[, (ncol(fit()) - 5):ncol(fit())], 4)
+                ), #cbind(mod()[, 1:2], round(mod()[, 3:ncol(mod())], 4)),
                 rownames = FALSE,
                 options = list(searching = FALSE, paging = FALSE))
 })
