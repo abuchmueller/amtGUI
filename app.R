@@ -329,7 +329,7 @@ tabItem(tabName = "plot",
 
 tabItem(tabName = "model",
   # Enable to clear all inputs of modeling tab by "clear model" button
-  useShinyjs(),
+  shinyjs::useShinyjs(),
   div(id = "modeling_tab",
   fluidRow(
     column(width = 2, #offset = 1,
@@ -789,8 +789,12 @@ trk <- reactive({
   )
   # No ID selected (one model for all animals)
   if (input$id == '') {
+    # Subset data according to selected dateRangeInput
+    dat_excl_id_df <- dat_excl_id() %>% 
+      filter(ts >= input$daterange[1] & ts <= input$daterange[2])
     # Assign known EPSG Code to tracking data
-    track <- make_track(dat_excl_id(), x, y, ts,
+    track <- make_track(dat_excl_id_df, #dat_excl_id(), 
+                        x, y, ts,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
     # Transform CRS of track
@@ -801,9 +805,12 @@ trk <- reactive({
     }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     # Multiple IDs selected (individual models)
+    # Subset data according to selected dateRangeInput
+    dat_df <- dat() %>% 
+      filter(ts >= input$daterange[1] & ts <= input$daterange[2])
+    # Assign known EPSG Code to tracking data (no transformation necessary)
     if (input$epsg_csv == input$epsg_trk) {
-      # Assign known EPSG Code to tracking data
-      track_multi <- dat() %>% nest(-id) %>%
+      track_multi <- dat_df %>% nest(-id) %>% #dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste0("+init=epsg:",
                                                             input$epsg_csv))
@@ -813,7 +820,7 @@ trk <- reactive({
       track_multi[track_multi$id %in% input$id_trk, ]
     } else {
       # Transform CRS of track
-      trk_multi_tr <- dat() %>% nest(-id) %>%
+      trk_multi_tr <- dat_df %>% nest(-id) %>% #dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste0(
             "+init=epsg:", input$epsg_csv))) %>%
@@ -825,8 +832,12 @@ trk <- reactive({
     }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
     # One ID selected
+    # Subset data according to selected dateRangeInput
+    dat_df <- dat() %>% 
+      filter(ts >= input$daterange[1] & ts <= input$daterange[2])
     # Assign known EPSG Code to tracking data
-    track_one <- make_track(dat(), x, y, ts, id = id,
+    track_one <- make_track(dat_df, #dat(), 
+                            x, y, ts, id = id,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
     # Subset filtered ID(s)
@@ -936,7 +947,7 @@ trk_df <- reactive({
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
       trk_unnested_df <- trk() %>% select(id, track) %>% unnest 
       #Subsetting according to selected dateRangeInput
-      trk_unnested_df %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      trk_unnested_df #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
       # trk_unnested_df[trk_unnested_df$t_ >= input$daterange[1] & trk_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
@@ -944,11 +955,11 @@ trk_df <- reactive({
       # Swap columns for uniformity
       # trk()[, c("id", "x_", "y_", "t_")]
       #Subsetting according to selected dateRangeInput
-      trk() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_, burst_)
+      trk() %>% select(id, x_, y_, t_) #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_)
       # trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_")]
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
-      trk() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      trk() #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
       # trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     }
   } else {
@@ -958,20 +969,20 @@ trk_df <- reactive({
       # Convert back to data frame for illustration
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
       #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
-      #Subsetting according to selected dateRangeInput
-      trk_resamp_unnested_df %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      # Subsetting according to selected dateRangeInput
+      trk_resamp_unnested_df #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
       # trk_resamp_unnested_df[trk_resamp_unnested_df$t_ >= input$daterange[1] & trk_resamp_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       # trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
-      #Subsetting according to selected dateRangeInput
-      trk_resamp() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_, burst_)
+      # Subsetting according to selected dateRangeInput
+      trk_resamp() %>% select(id, x_, y_, t_, burst_) #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_, burst_)
       # trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_", "burst_")]
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
-      trk_resamp() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      trk_resamp() #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
       # trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
     }
   }
