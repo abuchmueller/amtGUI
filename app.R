@@ -1700,10 +1700,10 @@ mod_all_var <- reactive({
 })
 
 # Fit button (to start model fitting)
-fit <- eventReactive(input$fit_button, {
-  # Run model fitting part below
-  mod()
-})
+# fit <- eventReactive(input$fit_button, {
+#   # Run model fitting part below
+#   mod()
+# })
 
 # Clear model button (works for inputs only)
 observeEvent(input$clear_button, {
@@ -1793,7 +1793,7 @@ output$contents_mod <- DT::renderDataTable({
   # Dependent on fit button above
   DT::datatable(
     # Round numeric columns
-    fit() %>% mutate_if(is.numeric, round, 4),
+    mod() %>% mutate_if(is.numeric, round, 4),
     rownames = FALSE,
     options = list(searching = FALSE, paging = FALSE))
 })
