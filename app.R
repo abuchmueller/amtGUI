@@ -805,13 +805,11 @@ samp_rate <- reactive({
   )
   # Multiple IDs selected
  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-   # trk_multi <- group_by(trk(), id) %>% nest()
-   # map_df(trk_multi$data, summarize_sampling_rate) %>% as.data.frame()
    trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>%
      select(id, sr) %>% unnest
  } else {
     # One/ no ID selected
-    summarize_sampling_rate(trk()) %>% as.data.frame()
+    summarize_sampling_rate(trk())
  }
 })
 
@@ -834,35 +832,21 @@ output$summary_samp_rate <- DT::renderDataTable({
   )
   # Multiple IDs selected
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-    # Round results excluding columns "id" and "unit" (min)
-    sr <- subset(samp_rate(), select = - c(id, unit)) %>% round(2)
-    # Add id column
-    sr <- cbind(subset(samp_rate(), select = id), sr)
-    DT::datatable(sr,
-                  rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE#,
-                                 # Right align columns except 1st one
-                                 # columnDefs = list(
-                                 #   list(className = 'dt-right',
-                                 #        targets = 1:(ncol(sr)-1)
-                                 #   )
-                                 # )
-                  )
+    DT::datatable(
+      # Exclude column "unit" (min) and round numeric columns
+      samp_rate() %>% select(-unit) %>% mutate_if(is.numeric, round, 2),
+      rownames = FALSE,
+      options = list(searching = FALSE, paging = FALSE
+      )
     )
   } else {
     # One/ no ID selected
-    # Exclude column "unit" (min) and round
-    sr <- subset(samp_rate(), select = - unit) %>% round(2)
-    DT::datatable(sr,
-                  rownames = FALSE,
-                  options = list(searching = FALSE, paging = FALSE#,
-                                 # Right align columns
-                                 # columnDefs = list(
-                                 #   list(className = 'dt-right',
-                                 #        targets = 0:(ncol(sr)-1)
-                                 #   )
-                                 # )
-                  )
+    DT::datatable(
+      # Exclude column "unit" (min) and round numeric columns
+      samp_rate() %>% select(-unit) %>% mutate_if(is.numeric, round, 2),
+      rownames = FALSE,
+      options = list(searching = FALSE, paging = FALSE
+      )
     )
   }
 })
@@ -901,17 +885,20 @@ trk_df <- reactive({
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
       trk_unnested_df <- trk() %>% select(id, track) %>% unnest 
       #Subsetting according to selected dateRangeInput
-      trk_unnested_df[trk_unnested_df$t_ >= input$daterange[1] & trk_unnested_df$t_ <= input$daterange[2], ]
+      trk_unnested_df %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      # trk_unnested_df[trk_unnested_df$t_ >= input$daterange[1] & trk_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       # trk()[, c("id", "x_", "y_", "t_")]
       #Subsetting according to selected dateRangeInput
-      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_")]
+      trk() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_, burst_)
+      # trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_")]
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
-      trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
+      trk() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      # trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
     }
   } else {
     # Resampled track
@@ -921,17 +908,20 @@ trk_df <- reactive({
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
       #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
       #Subsetting according to selected dateRangeInput
-      trk_resamp_unnested_df[trk_resamp_unnested_df$t_ >= input$daterange[1] & trk_resamp_unnested_df$t_ <= input$daterange[2], ]
+      trk_resamp_unnested_df %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      # trk_resamp_unnested_df[trk_resamp_unnested_df$t_ >= input$daterange[1] & trk_resamp_unnested_df$t_ <= input$daterange[2], ]
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
       # Swap columns for uniformity
       # trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
       #Subsetting according to selected dateRangeInput
-      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_", "burst_")]
+      trk_resamp() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_, burst_)
+      # trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_", "burst_")]
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
-      trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
+      trk_resamp() %>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+      # trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
     }
   }
 }) 
@@ -941,29 +931,25 @@ output$contents_trk <- DT::renderDataTable({
   validate(
     need(input$x, 'Please assign longitude.'),
     need(input$y, 'Please assign latitude.'),
-    need(input$ts, 'Please assign timestamp.')#,
-    #need(input$id, 'Please assign ID.')
+    need(input$ts, 'Please assign timestamp.')
   )
   if (input$display_trk == "Data Frame") {
-    # Round longitude and latitude (x, y)
-    trk_df_rounded <- trk_df()
-    trk_df_rounded$x_ <- round(trk_df_rounded$x_, 2)
-    trk_df_rounded$y_ <- round(trk_df_rounded$y_, 2)
-    
-    DT::datatable(trk_df_rounded, #trk_df(),
-                  rownames = FALSE,
-                  options = list(searching = FALSE,
-                                 lengthMenu = list(
-                                   c(5, 10, 20, 50, 100),
-                                   c('5', '10', '20', '50', '100')),
-                                 pageLength = 10,
-                                 # Left align columns
-                                 columnDefs = list(
-                                   list(className = 'dt-left', 
-                                        targets = 0:(ncol(trk_df_rounded)-1)
-                                   )
-                                 )
-                  )
+    DT::datatable(
+      # Round numeric columns
+      trk_df() %>% mutate_if(is.numeric, round, 2),
+      rownames = FALSE,
+      options = list(searching = FALSE,
+                     lengthMenu = list(
+                       c(5, 10, 20, 50, 100),
+                       c('5', '10', '20', '50', '100')),
+                     pageLength = 10,
+                     # Left align columns
+                     columnDefs = list(
+                       list(className = 'dt-left', 
+                            targets = 0:(ncol(trk_df())-1)
+                       )
+                     )
+      )
     )
   }
 })
@@ -1806,15 +1792,10 @@ output$contents_mod <- DT::renderDataTable({
   )
   # Dependent on fit button above
   DT::datatable(
-    cbind(
-      # Do not round 1st and 2nd column if ID's are selected,
-      # do not round 1st column if one/ no ID is selected
-      fit()[, -((ncol(fit()) - 5):ncol(fit()))],
-      # Round last 6 columns of data frame
-      round(fit()[, (ncol(fit()) - 5):ncol(fit())], 4)
-                ), #cbind(mod()[, 1:2], round(mod()[, 3:ncol(mod())], 4)),
-                rownames = FALSE,
-                options = list(searching = FALSE, paging = FALSE))
+    # Round numeric columns
+    fit() %>% mutate_if(is.numeric, round, 4),
+    rownames = FALSE,
+    options = list(searching = FALSE, paging = FALSE))
 })
 
 # Download button for csv of model output ----
