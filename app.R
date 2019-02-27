@@ -141,19 +141,26 @@ ui <- dashboardPage(skin = "green",
                         multiple = TRUE
                         #accept = c("tif", ".tif")
                       ),
+                      # Action button to reset input
                       actionButton('reset_env', 'Reset Input'),
                       # Horizontal line
                       hr(),
                       # Example Datasets
-                      selectInput(
-                        inputId = "ex_data_env",
-                        label = "Choose Example Data:",
-                        choices = c("None", "Fisher NY Land Use Area")
-                      ),
+                      uiOutput(outputId = "ex_data_env"),
+                      # selectInput(
+                      #   inputId = "ex_data_env",
+                      #   label = "Choose Example Data:",
+                      #   choices = c("None", "Fisher NY Land Use Area")
+                      # ),
                       # EPSG Code TIF
                       uiOutput(outputId = "epsg_env")
                     ),
                     mainPanel = mainPanel(
+                      # Headline
+                      h4(textOutput(outputId = "epsg_head")),
+                      # Sub headline (instructions)
+                      h5(textOutput(outputId = "epsg_sub_head")),
+                      br(),
                       DT::dataTableOutput(outputId = "contents_env")
                     )
                   )
@@ -521,6 +528,10 @@ observeEvent(input$reset_env, {
 })
 # Environmental data input e.g. TIF-File
 envInput <- reactive({
+  validate(
+    need(input$ex_data_env, ''), # Otherwise error shown during loading phase. 
+    need(csvInput(), 'Please upload track data first.')
+  )
   if (is.null(values_env$upload_state)){
     switch (input$ex_data_env,
             "Fisher NY Land Use Area" = land_use_fisher_ny,
@@ -570,6 +581,17 @@ env <- reactive({
     env_renamed
   }
 })
+# Input: Upload example data
+output$ex_data_env <- renderUI({
+  validate(
+    need(csvInput(), '')
+  )
+  selectInput(
+    inputId = "ex_data_env",
+    label = "Choose Example Data:",
+    choices = c("None", "Fisher NY Land Use Area")
+  )
+})
 # Detect EPSG Code of TIF-File by left joining data frame "epsg_data"
 epsg_env_detected <- reactive({
   validate(
@@ -579,17 +601,20 @@ epsg_env_detected <- reactive({
                               stringsAsFactors = FALSE)
   detect_epsg <- dplyr::left_join(env_prj4, epsg_data, by = "prj4")
   # Multiple matches possible
-  detect_epsg %>% select("Detected EPSG Code(s)" = code, "Description" = note)
+  detect_epsg %>% select("EPSG Code(s)" = code, "Description" = note)
   })
-# EPSG Code TIF
+# Input: EPSG Code TIF
 output$epsg_env <- renderUI({
+  validate(
+    need(csvInput(), '')
+  )
   selectInput(
     inputId = "epsg_env",
     label = "Assign EPSG Code:", 
     choices = sort(na.omit(epsg_data$code)),
     selected = ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
                       # Multiple matches possible select 1st one by default
-                      yes = epsg_env_detected()[1, "Detected EPSG Code(s)"],
+                      yes = epsg_env_detected()[1, "EPSG Code(s)"],
                       no = input$epsg_csv
                       )
 )
@@ -600,18 +625,38 @@ output$epsg_env <- renderUI({
 # ?????????
 
 
+# Show headline for EPSG Code table
+output$epsg_head <- renderText({
+  validate(
+    need(epsg_env_detected(), '')
+  )
+  "Found EPSG Code(s) for Uploaded File(s)"
+})
+# Sub headline (instructions)
+output$epsg_sub_head <- renderText({
+  validate(
+    need(epsg_env_detected(), '')
+  )
+  "Please verify and assign an appropriate EPSG code this may vary from the 
+  option(s) below."
+})
+
+
 # Data frame of detected EPSG codes
 output$contents_env <- DT::renderDataTable({
   validate(
     need(env(), 'Please upload an environmental data file.'),
-    need(epsg_env_detected(), 'No EPSG code detected from uploaded file.')
+    need(epsg_env_detected(), 'No EPSG code detected for uploaded file.')
   )
   DT::datatable(epsg_env_detected(),
                 rownames = FALSE,
                 options = list(searching = FALSE, paging = FALSE,
-                columnDefs = list(list(className = 'dt-left', 
-                                       targets = 0:1)))
+                               # Left align columns
+                               columnDefs = list(
+                                 list(className = 'dt-left', targets = 0:1)
+                               )
                 )
+  )
 })
 
 
@@ -735,12 +780,12 @@ dat_excl_id <- reactive({
 #trk()####
 # Create a track
 trk <- reactive({
-    validate(
-      need(input$x, ''),
-      need(input$y, ''),
-      need(input$ts, '')
-    )
-  
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, ''),
+    need(input$daterange, '')
+  )
   # No ID selected (one model for all animals)
   if (input$id == '') {
     # Assign known EPSG Code to tracking data
@@ -770,7 +815,7 @@ trk <- reactive({
       trk_multi_tr <- dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste0(
-            "+init=epsg:", input$epsg_csv))) %>% 
+            "+init=epsg:", input$epsg_csv))) %>%
             amt::transform_coords(sp::CRS(paste0("+init=epsg:", input$epsg_trk))
             )
         }))
@@ -801,16 +846,17 @@ samp_rate <- reactive({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, '')
+    need(input$ts, ''),
+    need(trk(), '')
   )
   # Multiple IDs selected
- if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
-   trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>%
-     select(id, sr) %>% unnest
- } else {
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    trk() %>% mutate(sr = lapply(track, summarize_sampling_rate)) %>%
+      select(id, sr) %>% unnest
+  } else {
     # One/ no ID selected
     summarize_sampling_rate(trk())
- }
+  }
 })
 
 # Show head line for sampling rate (Output)
@@ -879,6 +925,10 @@ trk_resamp <- reactive({
 #trk_df()####
 # Track table displayed in app (dependent on resampling)
 trk_df <- reactive({
+  validate(
+    need(trk(), ''),
+    need(input$daterange[1] && input$daterange[2], 'Please select a date range.')
+  )
   # Before resampling
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
     # Multiple IDs selected
@@ -959,8 +1009,7 @@ output$summary_trk <- renderPrint({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, '')#,
-    #need(input$id, '')
+    need(input$ts, '')
   )
   if (input$display_trk == "Column Summary") {
     summary(object = trk_df())
