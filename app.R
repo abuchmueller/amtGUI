@@ -10,8 +10,9 @@ library(rhandsontable)
 # Tracking / relocation data
 fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
 # Subset relevant columns
-fisher_ny <- fisher_ny[, c("location-long", "location-lat", "timestamp", 
-                           "individual-local-identifier")]
+fisher_ny <- fisher_ny %>% select(
+  "individual-local-identifier", "location-long", "location-lat", "timestamp"
+)
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
 
