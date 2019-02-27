@@ -11,7 +11,7 @@ library(rhandsontable)
 fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
 # Subset relevant columns
 fisher_ny <- fisher_ny %>% select(
-  "individual-local-identifier", "location-long", "location-lat", "timestamp"
+  "location-long", "location-lat", "timestamp", "individual-local-identifier"
 )
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
@@ -785,7 +785,8 @@ trk <- reactive({
     need(input$x, ''),
     need(input$y, ''),
     need(input$ts, ''),
-    need(input$daterange, '')
+    need(input$daterange[1], 'Please select start of date range.'),
+    need(input$daterange[2], 'Please select end of date range.')
   )
   # No ID selected (one model for all animals)
   if (input$id == '') {
@@ -938,8 +939,7 @@ trk_resamp <- reactive({
 # Track table displayed in app (dependent on resampling)
 trk_df <- reactive({
   validate(
-    need(trk(), ''),
-    need(input$daterange[1] && input$daterange[2], 'Please select a date range.')
+    need(trk(), '')
   )
   # Before resampling
   if (is.na(input$rate_min) && is.na(input$tol_min)) {
