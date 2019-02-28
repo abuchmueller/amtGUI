@@ -1,14 +1,14 @@
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
-library(tidyverse)
+#library(tidyverse)
 library(amt)
 library(rhandsontable)
 
 
 # Example data
-# Tracking / relocation data
-fisher_ny <- read_csv("data/Martes pennanti LaPoint New York.csv")
+# Track / relocation data
+fisher_ny <- readr::read_csv("data/Martes pennanti LaPoint New York.csv")
 # Subset relevant columns
 fisher_ny <- fisher_ny %>% select(
   "location-long", "location-lat", "timestamp", "individual-local-identifier"
@@ -56,8 +56,7 @@ ui <- dashboardPage(skin = "green",
 # Data Upload Tab ---------------------------------------------------------
 
       tabItem(tabName = "data",
-        fluidRow(
-          title = "Tracking Data Upload",
+        fluidPage(
           # Sidebar layout with input and output definitions
           sidebarLayout(
             sidebarPanel = sidebarPanel(
@@ -129,8 +128,7 @@ ui <- dashboardPage(skin = "green",
 # Upload Map Tab ----------------------------------------------------------
 
       tabItem(tabName = "map",
-              fluidRow(
-                  title = "Environmental Data Upload",
+              fluidPage(
                   # Sidebar layout with input and output definitions
                   sidebarLayout(
                     sidebarPanel = sidebarPanel(
@@ -332,43 +330,67 @@ tabItem(tabName = "model",
   shinyjs::useShinyjs(),
   div(id = "modeling_tab",
   fluidRow(
-    column(width = 2, #offset = 1,
-           # useShinyjs(),
-           # div(id = "modeling_tab",
-           radioButtons(
+    column(width = 4,
+           # Headline
+           h4(textOutput(outputId = "modeling_head")),
+           # Choose a model
+           selectInput(
              inputId = "model",
-             label = h4("Choose a Model"),
-             choices = c("Resource Selection Function", 
-                         "Integrated Step Selection Function",
-                         "None"),
-             selected = "None"
-           ),
-           # Set number of random steps per relocation (ISSF)
-           uiOutput(outputId = "rand_stps"),
-           # Set number of random points (RSF)
-           uiOutput(outputId = "rand_points"),
-           # Fit model button
-           actionButton("fit_button", "Fit Model", icon = icon("poll"), width = "112%"),
-           # Clear button
-           actionButton("clear_button", "Clear Model", icon = icon("poll"), width = "112%"),
-           br(),
-           # Download button for model output
-           downloadButton("downloadData", "Download")
+             label = "Choose a Model:",
+             choices = c("Integrated Step Selection Function",
+                         "Resource Selection Function",
+                         ''),
+             selected = ''
+           )
+           # radioButtons(
+           #   inputId = "model",
+           #   label = h4("Choose a Model"),
+           #   choices = c("Resource Selection Function",
+           #               "Integrated Step Selection Function",
+           #               "None"),
+           #   selected = "None"
+           # ),
+           # # Fit model button
+           # actionButton("fit_button", "Fit Model", icon = icon("poll")), #, width = "112%"),
+           # # Clear button
+           # actionButton("clear_button", "Clear Model", icon = icon("poll")), #, width = "112%"),
+           # br(),
+           # # Download button for model output
+           # downloadButton("downloadData", "Download")
     ),
-    column(width = 3,
+    column(
+      width = 3,
+      br(),
+      br(),
+      # Set number of random steps per relocation (ISSF)
+      uiOutput(outputId = "rand_stps"),
+      # Set number of random points (RSF)
+      uiOutput(outputId = "rand_points")
+    )
+  ),
+  fluidRow(
+    column(width = 4,
            br(),
-           br(),
+           # br(),
            # Select land use area
            #uiOutput(outputId = "lu"),
            # Assign land use covariate name
            #uiOutput(outputId = "lu_name"),
            # Select model variables
-           uiOutput(outputId = "mod_var"),
+           uiOutput(outputId = "mod_var")#,
            # Select no. of interaction terms to add
-           uiOutput(outputId = "inter_no")
+           #uiOutput(outputId = "inter_no")
            # Select logarithmized model variables
            #uiOutput(outputId = "log_var")
     ),
+    column(
+      width = 3,
+      br(),
+      # Select no. of interaction terms to add
+      uiOutput(outputId = "inter_no")
+    )
+  ),
+  fluidRow(
     # column(width = 2,
     #        # Select 1st to 5th interaction
     #        uiOutput(outputId = "inter_1"),
@@ -377,42 +399,42 @@ tabItem(tabName = "model",
     #        uiOutput(outputId = "inter_4"),
     #        uiOutput(outputId = "inter_5")
     #        )
-    column(width = 1,
-           br(),
-           #br(),
+    column(width = 2,
            # Select 1st interaction
            uiOutput(outputId = "inter_1")
     ),
-    column(width = 1,
-           br(),
-           #br(),
+    column(width = 2,
            # Select 2nd interaction
            uiOutput(outputId = "inter_2")
     ),
-    column(width = 1,
-           br(),
-           #br(),
+    column(width = 2,
            # Select 3rd interaction
            uiOutput(outputId = "inter_3")
     ),
-    column(width = 1,
-           br(),
-           #br(),
+    column(width = 2,
            # Select 4th interaction
            uiOutput(outputId = "inter_4")
     ),
-    column(width = 1,
-           br(),
-           #br(),
+    column(width = 2,
            # Select 5th interaction
            uiOutput(outputId = "inter_5")
     )
   )
-  ), # End of clear inputs  
-  br(), # break
-  hr(), # horizontal line not showing for some reason???
+  ), # End of clear inputs
+  fluidRow(
+    column(
+      width = 2,
+      # Fit model button
+      actionButton("fit_button", "Fit Model", icon = icon("poll")), #, width = "112%")
+      # Clear button
+      actionButton("clear_button", "Clear Model", icon = icon("poll")), #, width = "112%")
+      # Download button for model output
+      downloadButton("downloadData", "Download")
+    )
+  ),
   fluidRow(
     column(width = 5,
+        br(),
         DT::dataTableOutput(outputId = "contents_mod")
         #plotOutput(outputId = "mod_plot")
     )
@@ -459,25 +481,25 @@ csvInput <- reactive({
   } else if (values_csv$upload_state == 'uploaded') {
     # Comma separated
     if (input$sep == ",") {
-      csv_uploaded <- read_csv(file = input$dataset_csv$datapath, 
-                               col_names = input$header,
-                               quote = input$quote)
+      csv_uploaded <- readr::read_csv(file = input$dataset_csv$datapath, 
+                                      col_names = input$header,
+                                      quote = input$quote)
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
     }
     # Semicolon separated
     if (input$sep == ";") {
-      csv_uploaded <- read_csv2(file = input$dataset_csv$datapath,
-                                col_names = input$header,
-                                quote = input$quote)
+      csv_uploaded <- readr::read_csv2(file = input$dataset_csv$datapath,
+                                       col_names = input$header,
+                                       quote = input$quote)
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
     }
     # Tab separated
     if (input$sep == "\t") {
-      csv_uploaded <- read_tsv(file = input$dataset_csv$datapath, 
-                               col_names = input$header,
-                               quote = input$quote)
+      csv_uploaded <- readr::read_tsv(file = input$dataset_csv$datapath, 
+                                      col_names = input$header,
+                                      quote = input$quote)
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
     }
@@ -893,7 +915,7 @@ output$summary_samp_rate <- DT::renderDataTable({
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     DT::datatable(
       # Exclude column "unit" (min) and round numeric columns
-      samp_rate() %>% select(-unit) %>% mutate_if(is.numeric, round, 2),
+      samp_rate() %>% select(-unit) %>% dplyr::mutate_if(is.numeric, round, 2),
       rownames = FALSE,
       options = list(searching = FALSE, paging = FALSE
       )
@@ -902,7 +924,7 @@ output$summary_samp_rate <- DT::renderDataTable({
     # One/ no ID selected
     DT::datatable(
       # Exclude column "unit" (min) and round numeric columns
-      samp_rate() %>% select(-unit) %>% mutate_if(is.numeric, round, 2),
+      samp_rate() %>% select(-unit) %>% dplyr::mutate_if(is.numeric, round, 2),
       rownames = FALSE,
       options = list(searching = FALSE, paging = FALSE
       )
@@ -998,7 +1020,7 @@ output$contents_trk <- DT::renderDataTable({
   if (input$display_trk == "Data Frame") {
     DT::datatable(
       # Round numeric columns
-      trk_df() %>% mutate_if(is.numeric, round, 2),
+      trk_df() %>% dplyr::mutate_if(is.numeric, round, 2),
       rownames = FALSE,
       options = list(searching = FALSE,
                      lengthMenu = list(
@@ -1280,6 +1302,13 @@ output$env_df = renderRHandsontable({
 
 # Modeling ----------------------------------------------------------------
 
+# Show headline for EPSG Code table
+output$modeling_head <- renderText({
+  validate(
+    need(input$min_burst, 'Please create a track first.')
+  )
+  "Conditional Logit Model"
+})
 # Set number of random steps per relocation
 output$rand_stps <- renderUI({
   validate(
@@ -1300,7 +1329,7 @@ output$rand_points <- renderUI({
   )
   numericInput(
     inputId = "rand_points",
-    label = "Set No. of Random Points:",
+    label = "Random Points:",
     value = 100,
     min = 1,
     step = 1
@@ -1335,7 +1364,7 @@ output$inter_no <- renderUI({
   )
   sliderInput(
     inputId = "inter_no",
-    label = "Select No. of Interaction Terms:",
+    label = "Add Interaction Terms:",
     min = 0,
     max = 5,
     value = 2,
@@ -1440,7 +1469,8 @@ output$inter_5 <- renderUI({
 # Fit model (data preparation)
 mod_pre <- reactive({
   validate(
-    need(input$model != 'None', '')
+    need(trk_resamp(), ''),
+    need(input$model != '', '')
   )
   # Multiple IDs selected (individual models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
@@ -1709,6 +1739,10 @@ mod_pre <- reactive({
 
 # Get variable names
 mod_pre_var <- reactive({
+  validate(
+    need(mod_pre(), ''),
+    need(input$model != '', '')
+  )
   # Multiple IDs selected (individual models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     if (input$model == "Resource Selection Function") {
@@ -1768,7 +1802,7 @@ mod_all_var <- reactive({
 
 # Clear model button (works for inputs only)
 observeEvent(input$clear_button, {
-  reset("modeling_tab")
+  shinyjs::reset("modeling_tab")
 })
 
 # Observe fit model and clear model buttons for model output
@@ -1784,7 +1818,7 @@ observeEvent(input$clear_button, {
 # Fit model
 mod <- reactive({
   validate(
-    need(input$model != 'None', 'Please choose a model.'),
+    need(input$model != '', 'Please choose a model.'),
     need(values_model$model_state == 'fit', '')
   )
   # Multiple IDs selected (individual models)
@@ -1800,7 +1834,7 @@ mod <- reactive({
         points, ~ amt::fit_rsf(., as.formula(paste("case_ ~", mod_all_var())))))
       # Data frame with coefficients
       rsf_multi %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
-        select(id, coef) %>% unnest() %>% as.tibble()
+        select(id, coef) %>% unnest() %>% tibble::as.tibble()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
@@ -1815,7 +1849,7 @@ mod <- reactive({
               )))))
       # Data frame with coefficients
       issf_multi_fit %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
-        select(id, coef) %>% unnest() %>% as.tibble()
+        select(id, coef) %>% unnest() %>% tibble::as.tibble()
     }
   } else {
     # One/ no ID selected (single model)
@@ -1828,7 +1862,7 @@ mod <- reactive({
       rsf_one_fit <- mod_pre() %>% 
         fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
       # Data frame with coefficients
-      broom::tidy(rsf_one_fit$model) %>% as.tibble()
+      broom::tidy(rsf_one_fit$model) %>% tibble::as.tibble()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
@@ -1840,7 +1874,7 @@ mod <- reactive({
           as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"))
           )
       # Data frame with coefficients
-      broom::tidy(issf_one_fit$model) %>% as.tibble()
+      broom::tidy(issf_one_fit$model) %>% tibble::as.tibble()
     }
   }
 })
@@ -1848,13 +1882,13 @@ mod <- reactive({
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
   validate(
-    need(input$model != "None", ''),
+    need(input$model != '', ''),
     need(values_model$model_state == 'fit', '')
   )
   # Dependent on fit button above
   DT::datatable(
     # Round numeric columns
-    mod() %>% mutate_if(is.numeric, round, 4),
+    mod() %>% dplyr::mutate_if(is.numeric, round, 4),
     rownames = FALSE,
     options = list(searching = FALSE, paging = FALSE))
 })
