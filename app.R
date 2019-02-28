@@ -1483,9 +1483,9 @@ mod_pre <- reactive({
         need(input$rand_points, 'Please set no. of random points.')
       )
       t_res <- t_res %>% mutate(points = lapply(track, function(x) {
-        x %>% filter_min_n_burst(min_n = input$min_burst) %>% 
-          random_points(n = input$rand_points) %>% 
-          extract_covariates(env(), where = "both")
+        x %>% #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+          amt::random_points(n = input$rand_points) %>% 
+          amt::extract_covariates(env(), where = "both")
       }))
       # Convert environmental covariates to factor or numeric
       # Loop through IDs
@@ -1517,7 +1517,7 @@ mod_pre <- reactive({
       if (input$tod == '') {
         t_res <- t_res %>%
           mutate(steps = lapply(track, function(x) {
-            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+            x %>% #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
               amt::steps_by_burst() %>% 
               amt::random_steps(n = input$rand_stps) %>% 
               amt::extract_covariates(env(), where = "both") %>% 
@@ -1566,7 +1566,7 @@ mod_pre <- reactive({
         # A time of day option is selected 
         t_res <- t_res %>% 
           mutate(steps = lapply(track, function(x) {
-            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+            x %>% #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
               amt::steps_by_burst() %>% 
               amt::random_steps(n = input$rand_stps) %>% 
               amt::extract_covariates(env(), where = "both") %>% 
@@ -1623,7 +1623,7 @@ mod_pre <- reactive({
       )
       set.seed(12345)
       t_res <- trk_resamp() %>% 
-        filter_min_n_burst(min_n = input$min_burst) %>% 
+        #filter_min_n_burst(min_n = input$min_burst) %>% 
         random_points(n = input$rand_points) %>% 
         extract_covariates(env(), where = "both")
       
@@ -1651,10 +1651,10 @@ mod_pre <- reactive({
       if (input$tod == '') {
         set.seed(12345)
         t_res <- trk_resamp() %>% 
-          filter_min_n_burst(min_n = input$min_burst) %>% 
-          steps_by_burst() %>%
-          random_steps(n = input$rand_stps) %>% 
-          extract_covariates(env(), where = "both") %>%
+          #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+          amt::steps_by_burst() %>%
+          amt::random_steps(n = input$rand_stps) %>% 
+          amt::extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
                  cos_ta_ = cos(ta_)
           )
@@ -1692,10 +1692,10 @@ mod_pre <- reactive({
         # A time of day option is selected 
         set.seed(12345)
         t_res <- trk_resamp() %>% 
-          filter_min_n_burst(min_n = input$min_burst) %>% 
-          steps_by_burst() %>% 
-          random_steps(n = input$rand_stps) %>% 
-          extract_covariates(env(), where = "both") %>%
+          #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+          amt::steps_by_burst() %>% 
+          amt::random_steps(n = input$rand_stps) %>% 
+          amt::extract_covariates(env(), where = "both") %>%
           mutate(log_sl_ = log(sl_), 
                  cos_ta_ = cos(ta_)
           ) %>%
@@ -1860,7 +1860,7 @@ mod <- reactive({
       )
       set.seed(12345)
       rsf_one_fit <- mod_pre() %>% 
-        fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
+        amt::fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
       # Data frame with coefficients
       broom::tidy(rsf_one_fit$model) %>% tibble::as.tibble()
       
@@ -1870,7 +1870,7 @@ mod <- reactive({
       )
       set.seed(12345)
       issf_one_fit <- mod_pre() %>% 
-        fit_issf(
+        amt::fit_issf(
           as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"))
           )
       # Data frame with coefficients
