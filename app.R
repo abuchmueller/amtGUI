@@ -11,7 +11,8 @@ library(rhandsontable)
 fisher_ny <- readr::read_csv("data/Martes pennanti LaPoint New York.csv")
 # Subset relevant columns
 fisher_ny <- fisher_ny %>% select(
-  "location-long", "location-lat", "timestamp", "individual-local-identifier"
+  longitude = "location-long", latitude = "location-lat", "timestamp", 
+  id = "individual-local-identifier"
 )
 # Rename columns containing special characters e.g. "-"
 names(fisher_ny) <- make.names(names(fisher_ny), unique = TRUE)
@@ -702,7 +703,7 @@ output$x <- renderUI({
   )
   selectizeInput(
     inputId = 'x', 
-    label = "Longitude (x):", 
+    label = "Longitude:", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign longitude', # 'Please select an option below'
@@ -717,7 +718,7 @@ output$y <- renderUI({
   )
   selectizeInput(
     inputId = 'y', 
-    label = "Latitude (y):", 
+    label = "Latitude:", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign latitude',
@@ -732,7 +733,7 @@ output$ts <- renderUI({
   )
   selectizeInput(
     inputId = 'ts', 
-    label = "Timestamp (t):", 
+    label = "Timestamp:", 
     choices = colnames(csvInput()),
     options = list(
       placeholder = 'Assign timestamp',
@@ -914,8 +915,8 @@ output$summary_samp_rate <- DT::renderDataTable({
   # Multiple IDs selected
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     DT::datatable(
-      # Exclude column "unit" (min) and round numeric columns
-      samp_rate() %>% select(-unit) %>% dplyr::mutate_if(is.numeric, round, 2),
+      # Exclude column "unit" (min), rename ID column and round numeric columns
+      samp_rate() %>% select(-unit, ID = id) %>% dplyr::mutate_if(is.numeric, round, 2),
       rownames = FALSE,
       options = list(searching = FALSE, paging = FALSE
       )
@@ -968,21 +969,18 @@ trk_df <- reactive({
     # Multiple IDs selected
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
       trk_unnested_df <- trk() %>% select(id, track) %>% unnest 
-      #Subsetting according to selected dateRangeInput
-      trk_unnested_df #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
-      # trk_unnested_df[trk_unnested_df$t_ >= input$daterange[1] & trk_unnested_df$t_ <= input$daterange[2], ]
+      # Rename columns
+      trk_unnested_df %>% select(ID = id, Longitude = x_, Latitude = y_, 
+                                 Timestamp = t_)
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
-      # Swap columns for uniformity
-      # trk()[, c("id", "x_", "y_", "t_")]
-      #Subsetting according to selected dateRangeInput
-      trk() %>% select(id, x_, y_, t_) #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_)
-      # trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_")]
+      # Rename and swap columns for uniformity
+      trk() %>% select(ID = id, Longitude = x_, Latitude = y_, Timestamp = t_)
     } else {
       # No ID selected (Subsetting according to selected dateRangeInput)
-      trk() #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
-      # trk()[trk()$t_ >= input$daterange[1] & trk()$t_ <= input$daterange[2], ]
+      # Rename columns
+      trk() %>% select(Longitude = x_, Latitude = y_, Timestamp = t_)
     }
   } else {
     # Resampled track
@@ -990,22 +988,20 @@ trk_df <- reactive({
     if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
       # Convert back to data frame for illustration
       trk_resamp_unnested_df <- trk_resamp() %>% select(id, track) %>% unnest
-      #trk_resamp_unnested_df <- trk_resamp() %>% unnest() %>% as.data.frame()
-      # Subsetting according to selected dateRangeInput
-      trk_resamp_unnested_df #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
-      # trk_resamp_unnested_df[trk_resamp_unnested_df$t_ >= input$daterange[1] & trk_resamp_unnested_df$t_ <= input$daterange[2], ]
+      # Rename Columns
+      trk_resamp_unnested_df %>% select(ID = id, Longitude = x_, Latitude = y_, 
+                                        Timestamp = t_, Burst = burst_)
     } else if (ifelse(input$id == '', yes = 0, 
                       no = length(input$id_trk)) == 1) {
       # One ID selected
-      # Swap columns for uniformity
-      # trk_resamp()[, c("id", "x_", "y_", "t_", "burst_")]
-      # Subsetting according to selected dateRangeInput
-      trk_resamp() %>% select(id, x_, y_, t_, burst_) #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2]) %>% select(id, x_, y_, t_, burst_)
-      # trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], c("id", "x_", "y_", "t_", "burst_")]
+      # Rename and swap columns for uniformity
+      trk_resamp() %>% select(ID = id, Longitude = x_, Latitude = y_, 
+                              Timestamp = t_, Burst = burst_)
     } else {
-      # No ID selected (Subsetting according to selected dateRangeInput)
-      trk_resamp() #%>% filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
-      # trk_resamp()[trk_resamp()$t_ >= input$daterange[1] & trk_resamp()$t_ <= input$daterange[2], ]
+      # No ID selected
+      # Rename Columns
+      trk_resamp()  %>% select(Longitude = x_, Latitude = y_, Timestamp = t_, 
+                               Burst = burst_)
     }
   }
 }) 
@@ -1066,7 +1062,7 @@ output$fetch_dr <- renderUI({
   }
   
   dateRangeInput(inputId = "daterange",
-                 label = "Choose a Date Range",
+                 label = "Choose a Date Range:",
                  start = min.date,
                  end = max.date,
                  max = Sys.Date(),
@@ -1483,7 +1479,7 @@ mod_pre <- reactive({
         need(input$rand_points, 'Please set no. of random points.')
       )
       t_res <- t_res %>% mutate(points = lapply(track, function(x) {
-        x %>% #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+        x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
           amt::random_points(n = input$rand_points) %>% 
           amt::extract_covariates(env(), where = "both")
       }))
@@ -1517,7 +1513,7 @@ mod_pre <- reactive({
       if (input$tod == '') {
         t_res <- t_res %>%
           mutate(steps = lapply(track, function(x) {
-            x %>% #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
               amt::steps_by_burst() %>% 
               amt::random_steps(n = input$rand_stps) %>% 
               amt::extract_covariates(env(), where = "both") %>% 
@@ -1566,7 +1562,7 @@ mod_pre <- reactive({
         # A time of day option is selected 
         t_res <- t_res %>% 
           mutate(steps = lapply(track, function(x) {
-            x %>% #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+            x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
               amt::steps_by_burst() %>% 
               amt::random_steps(n = input$rand_stps) %>% 
               amt::extract_covariates(env(), where = "both") %>% 
@@ -1623,9 +1619,9 @@ mod_pre <- reactive({
       )
       set.seed(12345)
       t_res <- trk_resamp() %>% 
-        #filter_min_n_burst(min_n = input$min_burst) %>% 
-        random_points(n = input$rand_points) %>% 
-        extract_covariates(env(), where = "both")
+        amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+        amt::random_points(n = input$rand_points) %>% 
+        amt::extract_covariates(env(), where = "both")
       
       # Convert environmental covariates to factor or numeric
       # where = "both" doesn't apply to random points unlike 
@@ -1651,7 +1647,7 @@ mod_pre <- reactive({
       if (input$tod == '') {
         set.seed(12345)
         t_res <- trk_resamp() %>% 
-          #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+          amt::filter_min_n_burst(min_n = input$min_burst) %>% 
           amt::steps_by_burst() %>%
           amt::random_steps(n = input$rand_stps) %>% 
           amt::extract_covariates(env(), where = "both") %>%
@@ -1692,7 +1688,7 @@ mod_pre <- reactive({
         # A time of day option is selected 
         set.seed(12345)
         t_res <- trk_resamp() %>% 
-          #amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+          amt::filter_min_n_burst(min_n = input$min_burst) %>% 
           amt::steps_by_burst() %>% 
           amt::random_steps(n = input$rand_stps) %>% 
           amt::extract_covariates(env(), where = "both") %>%
