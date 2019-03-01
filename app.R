@@ -301,20 +301,20 @@ tabItem(tabName = "covariates",
           ),
           column(width = 6, offset = 1,
                  # Headline
+                 h4(textOutput(outputId = "env_info_head")),
+                 # Sub headline (instructions)
+                 h5(textOutput(outputId = "env_info_sub_head")),
+                 # Environmental covariates data frame
+                 rHandsontableOutput(outputId = "env_df"),
+                 br(),
+                 # Headline
                  h4(textOutput(outputId = "tod_head")),
                  # Sub headline (instructions)
                  h5(textOutput(outputId = "tod_sub_head")),
                  # Time of day
                  uiOutput(outputId = "tod"),
-                 br(),
-                 br(),
-                 br(),
-                 # Headline
-                 h4(textOutput(outputId = "env_info_head")),
-                 # Sub headline (instructions)
-                 h5(textOutput(outputId = "env_info_sub_head")),
-                 # Environmental covariates data frame
-                 rHandsontableOutput(outputId = "env_df")
+                 # Data frame Time of Day levels 
+                 DT::dataTableOutput(outputId = "contents_tod")
           )
         )
 ),
@@ -942,7 +942,7 @@ trk_resamp <- reactive({
   # Multiple IDs selected
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     trk() %>%
-      mutate(track = map(track, function(x) {
+      mutate(track = lapply(track, function(x) {
         x %>% amt::track_resample(rate = minutes(input$rate_min),
                                   tolerance = minutes(input$tol_min))
       }))
@@ -1225,7 +1225,7 @@ output$contents_bursts <- DT::renderDataTable({
   )
   DT::datatable(bursts_df(),
                 rownames = FALSE,
-                options = list(searching = FALSE,
+                options = list(searching = FALSE, paging = FALSE,
                                lengthMenu = list(
                                  c(5, 10, 20, 50, 100),
                                  c('5', '10', '20', '50', '100')),
@@ -1252,10 +1252,92 @@ output$tod <- renderUI({
   selectInput(
     inputId = "tod",
     label = "Time of Day:",
-    choices = c("",
+    choices = c('',
                 "excl. dawn and dusk" = FALSE, 
                 "incl. dawn and dusk" = TRUE),
-    selected = NA #"excl. dawn and dusk"
+    selected = '' #"excl. dawn and dusk"
+  )
+})
+# Time of Day info data frame
+# No. of levels remaining after min. no. of relocations per burst is set
+# Interaction terms can be applied only to factors with 2 or more levels
+tod_df <- reactive({
+  validate(
+    need(input$min_burst, ''),
+    need(bursts_df(), ''),
+    need(input$tod != '', '')
+  )
+  # Multiple IDs selected
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    # Keep all IDs meeting chosen minimum no. of relocations per burst
+    keep_ids <- bursts_df()[which(bursts_df()$Bursts != 0), "ID"]
+    t_res <- trk_resamp()[trk_resamp()$id %in% keep_ids, ]
+    
+    t_res <- t_res %>% 
+      mutate(steps = lapply(track, function(x) {
+        x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+          amt::steps_by_burst() %>%
+          time_of_day(include.crepuscule = input$tod)
+      }))
+    # Get unique time of day levels per ID
+    unique_tod <- tibble(id = t_res$id, tod = rep(NA, length(t_res$id)), 
+                         levels = rep(NA, length(t_res$id)))
+    for (i in 1:nrow(t_res)) {
+      unique_tod$tod[i] <- paste0(sort(unique(t_res$steps[[i]][["tod_end_"]])), 
+                                  collapse = ", ")
+      unique_tod$levels[i] <- length(unique(t_res$steps[[i]][["tod_end_"]]))
+    }
+    # Return data frame sorted by no. of levels
+    unique_tod %>% dplyr::arrange(levels) %>% 
+      select(ID = id, "Time of Day" = tod, "Levels" = levels)
+    
+  } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
+    # One ID selected
+    t_res <- trk_resamp() %>% 
+      amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+      amt::steps_by_burst() %>%
+      # Add time of day
+      time_of_day(include.crepuscule = input$tod)
+    # Get unique time of day levels per ID
+    unique_tod <- tibble(id = input$id_trk, tod = NA, levels = NA)
+    unique_tod$tod <- paste0(sort(unique(t_res$tod_end_)), collapse = ", ")
+    unique_tod$levels <- length(unique(t_res$tod_end_))
+    # Return data frame
+    unique_tod %>% select(ID = id, "Time of Day" = tod, "Levels" = levels)
+  } else {
+    # No ID selected
+    t_res <- trk_resamp() %>% 
+      amt::filter_min_n_burst(min_n = input$min_burst) %>% 
+      amt::steps_by_burst() %>%
+      # Add time of day
+      time_of_day(include.crepuscule = input$tod)
+    # Get unique time of day levels per ID
+    unique_tod <- tibble(tod = NA, levels = NA)
+    unique_tod$tod <- paste0(sort(unique(t_res$tod_end_)), collapse = ", ")
+    unique_tod$levels <- length(unique(t_res$tod_end_))
+    # Return data frame
+    unique_tod %>% select("Time of Day" = tod, "Levels" = levels)
+  }
+})
+# Display data frame of Time of Day levels
+output$contents_tod <- DT::renderDataTable({
+  validate(
+    need(tod_df(), '')
+  )
+  DT::datatable(tod_df(),
+                rownames = FALSE,
+                options = list(searching = FALSE, paging = FALSE,
+                               lengthMenu = list(
+                                 c(5, 10, 20, 50, 100),
+                                 c('5', '10', '20', '50', '100')),
+                               pageLength = 10,
+                               # Left align columns
+                               columnDefs = list(
+                                 list(className = 'dt-left', 
+                                      targets = 0:(ncol(tod_df()) - 1)
+                                 )
+                               )
+                )
   )
 })
 # Show headline for environmental covariates data frame
@@ -1473,7 +1555,7 @@ mod_pre <- reactive({
     # Keep all IDs meeting chosen minimum no. of relocations per burst
     keep_ids <- bursts_df()[which(bursts_df()$Bursts != 0), "ID"]
     t_res <- trk_resamp()[trk_resamp()$id %in% keep_ids, ]
-    
+
     if (input$model == "Resource Selection Function") {
       validate(
         need(input$rand_points, 'Please set no. of random points.')
