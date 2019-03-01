@@ -1374,7 +1374,9 @@ output$env_df = renderRHandsontable({
   validate(
     need(env(), '')
   )
-  rhandsontable(env_info())
+  rhandsontable(env_info(), rowHeaders = NULL) %>%
+    # Center checkbox column "Categorical"
+    hot_col(col = "Categorical", halign = "htCenter")
 })
 
 
