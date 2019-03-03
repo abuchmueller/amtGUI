@@ -693,7 +693,7 @@ output$track_head <- renderText({
   if (!is.null(csvInput())) {
     "Select Track Variables"
   } else {
-    "Please upload tracking data first."
+    "Please upload track data first."
   }
 })
 # Choose x (location-long)
@@ -741,22 +741,34 @@ output$ts <- renderUI({
     )
   )
 })
+# Choices of ID input
+# Remove longitude, latitude and timestamp values 
+id_choices <- reactive({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
+  csv_cols <- colnames(csvInput())
+  pos_x_y_ts <- which(csv_cols %in% c(input$x, input$y, input$ts)) 
+  csv_cols[-pos_x_y_ts]
+})
 # id (individual-local-identifier)
 output$id <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(id_choices(), '')
   )
   selectizeInput(
     inputId = 'id', 
     label = "ID:", 
-    choices = colnames(csvInput()),
+    choices = id_choices(),
     options = list(
       placeholder = 'Group by ID (optional)',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
 })
-# EPSG Code Transformation of tracking data (CSV)
+# EPSG Code Transformation of track data (CSV)
 output$epsg_trk <- renderUI({
   validate(
     need(csvInput(), '')
@@ -816,7 +828,7 @@ trk <- reactive({
     # Subset data according to selected dateRangeInput
     dat_excl_id_df <- dat_excl_id() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
-    # Assign known EPSG Code to tracking data
+    # Assign known EPSG Code to track data
     track <- make_track(dat_excl_id_df, #dat_excl_id(), 
                         x, y, ts,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
@@ -832,7 +844,7 @@ trk <- reactive({
     # Subset data according to selected dateRangeInput
     dat_df <- dat() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
-    # Assign known EPSG Code to tracking data (no transformation necessary)
+    # Assign known EPSG Code to track data (no transformation necessary)
     if (input$epsg_csv == input$epsg_trk) {
       track_multi <- dat_df %>% nest(-id) %>% #dat() %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
@@ -859,7 +871,7 @@ trk <- reactive({
     # Subset data according to selected dateRangeInput
     dat_df <- dat() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
-    # Assign known EPSG Code to tracking data
+    # Assign known EPSG Code to track data
     track_one <- make_track(dat_df, #dat(), 
                             x, y, ts, id = id,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
@@ -1050,9 +1062,9 @@ output$summary_trk <- renderPrint({
 
 output$fetch_dr <- renderUI({
   validate(
-    need(input$ts, '')
+    need(input$ts, ''),
+    need(!is.null(input$id), '')
   )
-  
   if (input$id == '') {
     min.date <- min(dat_excl_id()$ts)
     max.date <- max(dat_excl_id()$ts)
@@ -1060,7 +1072,6 @@ output$fetch_dr <- renderUI({
     min.date <- min(dat()$ts)
     max.date <- max(dat()$ts)
   }
-  
   dateRangeInput(inputId = "daterange",
                  label = "Choose a Date Range:",
                  start = min.date,
@@ -1143,7 +1154,7 @@ bursts_df <- reactive({
           rate, i.e., adjust the interval (in min) to retain the current no.
           of minimum relocations per burst."),
         type = "warning",
-        duration = NULL
+        duration = 45 #NULL
         )
       # Return data frame (ordered by no. of bursts)
       b %>% dplyr::arrange(Bursts)
@@ -1176,7 +1187,7 @@ bursts_df <- reactive({
           adjust the interval (in min) to retain the current no. of minimum 
           relocations per burst."),
         type = "warning",
-        duration = NULL
+        duration = 45 #NULL
         )
       # Return data frame
       b
@@ -1208,7 +1219,7 @@ bursts_df <- reactive({
           i.e., adjust the interval (in min) to retain the current no. of 
           minimum relocations per burst."),
         type = "warning",
-        duration = NULL
+        duration = 45 #NULL
       )
       # Return data frame
       b
