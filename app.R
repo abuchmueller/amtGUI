@@ -1146,11 +1146,11 @@ bursts_df <- reactive({
         duration = NULL
         )
       # Return data frame (ordered by no. of bursts)
-      b[order(b$Bursts), ]
+      b %>% dplyr::arrange(Bursts)
     } else {
       # Did not found ID(s) that need to be removed before model building
       # Return data frame (ordered by no. of bursts)
-      b[order(b$Bursts), ]
+      b %>% dplyr::arrange(Bursts)
     }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
     # One ID selected
