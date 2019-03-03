@@ -1064,7 +1064,8 @@ output$fetch_dr <- renderUI({
   dateRangeInput(inputId = "daterange",
                  label = "Choose a Date Range:",
                  start = min.date,
-                 end = max.date,
+                 # Does not include upper bound therefore plus 1 day
+                 end = as.Date(max.date) + 1,
                  max = Sys.Date(),
                  format = "yyyy-mm-dd",
                  separator = "to",
