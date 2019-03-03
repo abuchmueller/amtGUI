@@ -1148,7 +1148,7 @@ bursts_df <- reactive({
       # Return data frame (ordered by no. of bursts)
       b %>% dplyr::arrange(Bursts)
     } else {
-      # Did not found ID(s) that need to be removed before model building
+      # Did not find ID(s) that need to be removed before model building
       # Return data frame (ordered by no. of bursts)
       b %>% dplyr::arrange(Bursts)
     }
@@ -1288,10 +1288,33 @@ tod_df <- reactive({
                                   collapse = ", ")
       unique_tod$levels[i] <- length(unique(t_res$steps[[i]][["tod_end_"]]))
     }
-    # Return data frame sorted by no. of levels
-    unique_tod %>% dplyr::arrange(levels) %>% 
-      select(ID = id, "Time of Day" = tod, "Levels" = levels)
-    
+    # Check whether ID(s) with only one level of Time of Day remain 
+    remove_ids <- trk_resamp()[which(unique_tod$levels == 1), "id"]
+    # Found ID(s) that can not be used when adding interaction terms
+    if (nrow(remove_ids) > 0) {
+      # Convert from tbl to vector to paste in notification below
+      remove_ids <- dplyr::pull(remove_ids, id)
+      # Notification: ID(s) with less than 2 factor levels
+      showNotification(
+        ui = paste0(
+          "Interaction terms can be applied only to factors with 2 or more 
+          levels. However, only one factor level remains for the ID(s): ",
+          paste0(remove_ids, collapse = ", "), ". Therefore, you cannot add
+          interactions with time of day to the model if you decide to keep the 
+          affected ID(s). Alternatively, you may adjust the restrictions on 
+          bursts, or resample the track differently."),
+        type = "warning",
+        duration = 30
+        )
+      # Return data frame sorted by no. of levels
+      unique_tod %>% dplyr::arrange(levels) %>% 
+        select(ID = id, "Time of Day" = tod, "Levels" = levels)
+    } else {
+      # Did not find ID(s) that need to be removed for interaction terms
+      # Return data frame sorted by no. of levels
+      unique_tod %>% dplyr::arrange(levels) %>% 
+        select(ID = id, "Time of Day" = tod, "Levels" = levels)
+    }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
     # One ID selected
     t_res <- trk_resamp() %>% 
@@ -1434,8 +1457,7 @@ output$mod_var <- renderUI({
     inputId = "mod_var", 
     label = "Select Variables:",
     choices = var_choices(),
-    multiple = TRUE#,
-    #selected = sort(names(mod_pre()))[-pos_excl]
+    multiple = TRUE
   )
 })
 # Slider for no. of interaction terms to add
