@@ -1288,7 +1288,7 @@ tod_df <- reactive({
                                   collapse = ", ")
       unique_tod$levels[i] <- length(unique(t_res$steps[[i]][["tod_end_"]]))
     }
-    # Check whether ID(s) with only one level of Time of Day remain 
+    # Check whether ID(s) with only one level of Time of Day remain
     remove_ids <- trk_resamp()[which(unique_tod$levels == 1), "id"]
     # Found ID(s) that can not be used when adding interaction terms
     if (nrow(remove_ids) > 0) {
@@ -1298,13 +1298,13 @@ tod_df <- reactive({
       showNotification(
         ui = paste0(
           "Interaction terms can be applied only to factors with 2 or more 
-          levels. However, only one factor level remains for the ID(s): ",
+          levels. However, only one factor level remain for the ID(s): ",
           paste0(remove_ids, collapse = ", "), ". Therefore, you cannot add
           interactions with time of day to the model if you decide to keep the 
           affected ID(s). Alternatively, you may adjust the restrictions on 
           bursts, or resample the track differently."),
         type = "warning",
-        duration = 30
+        duration = 45
         )
       # Return data frame sorted by no. of levels
       unique_tod %>% dplyr::arrange(levels) %>% 
@@ -1326,8 +1326,29 @@ tod_df <- reactive({
     unique_tod <- tibble(id = input$id_trk, tod = NA, levels = NA)
     unique_tod$tod <- paste0(sort(unique(t_res$tod_end_)), collapse = ", ")
     unique_tod$levels <- length(unique(t_res$tod_end_))
-    # Return data frame
-    unique_tod %>% select(ID = id, "Time of Day" = tod, "Levels" = levels)
+    # Check whether only one level of Time of Day remains for ID 
+    remove_id <- trk_resamp()[which(unique_tod$levels == 1), "id"]
+    # Interaction terms not possible as only one factor level remains for ID
+    if (nrow(remove_id) == 1) {
+      # Notification: ID has less than 2 factor levels
+      showNotification(
+        ui = paste0(
+          "Interaction terms can be applied only to factors with 2 or more 
+          levels. However, only one factor level remains for the ID: ",
+          paste0(remove_id), ". Therefore, you cannot add
+          interactions with time of day to the model. Alternatively, you may 
+          adjust the restrictions on bursts, or resample the track 
+          differently."),
+        type = "warning",
+        duration = 45
+        )
+      # Return data frame
+      unique_tod %>% select(ID = id, "Time of Day" = tod, "Levels" = levels)
+    } else {
+      # At least 2 facgtor levels of time of day remain for the ID 
+      # Return data frame
+      unique_tod %>% select(ID = id, "Time of Day" = tod, "Levels" = levels)
+    }
   } else {
     # No ID selected
     t_res <- trk_resamp() %>% 
@@ -1335,12 +1356,32 @@ tod_df <- reactive({
       amt::steps_by_burst() %>%
       # Add time of day
       time_of_day(include.crepuscule = input$tod)
-    # Get unique time of day levels per ID
+    # Get unique time of day levels
     unique_tod <- tibble(tod = NA, levels = NA)
     unique_tod$tod <- paste0(sort(unique(t_res$tod_end_)), collapse = ", ")
     unique_tod$levels <- length(unique(t_res$tod_end_))
-    # Return data frame
-    unique_tod %>% select("Time of Day" = tod, "Levels" = levels)
+    # Check whether only one level of Time of Day remains
+    remove <- trk_resamp()[which(unique_tod$levels == 1), ]
+    # Interaction terms not possible as only one factor level remains
+    if (nrow(remove) == 1) {
+      # Notification: less than 2 factor levels remain
+      showNotification(
+        ui = paste0(
+          "Interaction terms can be applied only to factors with 2 or more 
+          levels. However, only one factor level remains. Therefore, you cannot 
+          add interactions with time of day to the model. Alternatively, you may 
+          adjust the restrictions on bursts, or resample the track 
+          differently."),
+        type = "warning",
+        duration = 45
+        )
+      # Return data frame
+      unique_tod %>% select("Time of Day" = tod, "Levels" = levels)
+    } else {
+      # At least 2 facgtor levels of time of day remain
+      # Return data frame
+      unique_tod %>% select("Time of Day" = tod, "Levels" = levels)
+    }
   }
 })
 # Display data frame of Time of Day levels
