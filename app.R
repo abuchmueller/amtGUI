@@ -474,12 +474,14 @@ observeEvent(input$reset, {
 })
 
 csvInput <- reactive({
+  # No upload
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
+    # File uploaded
     # Comma separated
     if (input$sep == ",") {
       csv_uploaded <- readr::read_csv(file = input$dataset_csv$datapath, 
@@ -487,17 +489,15 @@ csvInput <- reactive({
                                       quote = input$quote)
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
-    }
-    # Semicolon separated
-    if (input$sep == ";") {
+    } else if (input$sep == ";") {
+      # Semicolon separated
       csv_uploaded <- readr::read_csv2(file = input$dataset_csv$datapath,
                                        col_names = input$header,
                                        quote = input$quote)
       # Rename columns containing special characters e.g. "-"
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
-    }
-    # Tab separated
-    if (input$sep == "\t") {
+    } else if (input$sep == "\t") {
+      # Tab separated
       csv_uploaded <- readr::read_tsv(file = input$dataset_csv$datapath, 
                                       col_names = input$header,
                                       quote = input$quote)
@@ -505,8 +505,9 @@ csvInput <- reactive({
       names(csv_uploaded) <- make.names(names(csv_uploaded), unique = TRUE)
     }
     return(csv_uploaded)
-  
-    } else if (values_csv$upload_state == 'reset') {
+    
+  } else if (values_csv$upload_state == 'reset') {
+    # Upload reseted
     switch (input$ex_data_csv,
             "Fisher NY" = fisher_ny,
             "None" = return()
@@ -553,46 +554,46 @@ observeEvent(input$reset_env, {
 # Environmental data input e.g. TIF-File
 envInput <- reactive({
   validate(
-    need(input$ex_data_env, ''), # Otherwise error shown during loading phase. 
-    need(csvInput(), 'Please upload track data first.')
+    need(csvInput(), '')
   )
-  if (is.null(values_env$upload_state)){
-    switch (input$ex_data_env,
-            "Fisher NY Land Use Area" = land_use_fisher_ny,
-            "None" = return()
-    )
-  } else if (values_env$upload_state == 'uploaded') {
-    # raster_up <- raster::raster(x = input$dataset_env$datapath)
-    # # Rename uploaded TIF for usage in model building
-    # names(raster_up) <- "land_use"
-    # raster_up
-    
-    # Get names of uploaded TIFs (named X0, X1, ... otherwise)
-    names_list <- lapply(input$dataset_env$name, function(x) x)
-    names_list <- gsub(".tif", '', names_list)
-    
-    # Store uploaded TIF file(s) as raster layer(s) in list
-    raster_list <- lapply(input$dataset_env$datapath, raster::raster)
-
-    # Test whether multiple files are uploaded
-    # Single file: access raster layer in list
-    if (length(raster_list) == 1) {
-      # Rename
-      names(raster_list[[1]]) <- names_list
-      raster_list[[1]]
-    } else {
-      # Multiple files: store raster layers in list as raster stack
-      r_stack <- raster::stack(raster_list)
-      # Rename
-      names(r_stack) <- names_list
-      r_stack
+  # Example data selectInput needs to be loaded (not null)
+  if (!is.null(input$ex_data_env)) {
+    # No upload
+    if (is.null(values_env$upload_state)){
+      switch (input$ex_data_env,
+              "Fisher NY Land Use Area" = land_use_fisher_ny,
+              "None" = return()
+      )
+    } else if (values_env$upload_state == 'uploaded') {
+      # File uploaded
+      # Get names of uploaded TIFs (named X0, X1, ... otherwise)
+      names_list <- lapply(input$dataset_env$name, function(x) x)
+      names_list <- gsub(".tif", '', names_list)
+      
+      # Store uploaded TIF file(s) as raster layer(s) in list
+      raster_list <- lapply(input$dataset_env$datapath, raster::raster)
+  
+      # Test whether multiple files are uploaded
+      # Single file: access raster layer in list
+      if (length(raster_list) == 1) {
+        # Rename
+        names(raster_list[[1]]) <- names_list
+        raster_list[[1]]
+      } else {
+        # Multiple files: store raster layers in list as raster stack
+        r_stack <- raster::stack(raster_list)
+        # Rename
+        names(r_stack) <- names_list
+        r_stack
+      }
+      
+    } else if (values_env$upload_state == 'reset') {
+      # Upload reseted
+      switch (input$ex_data_env,
+              "Fisher NY Land Use Area" = land_use_fisher_ny,
+              "None" = return()
+      )
     }
-    
-  } else if (values_env$upload_state == 'reset') {
-    switch (input$ex_data_env,
-            "Fisher NY Land Use Area" = land_use_fisher_ny,
-            "None" = return()
-    )
   }
 })
 # Rename environmental data input if required
@@ -643,19 +644,19 @@ output$epsg_env <- renderUI({
                       )
 )
 })
-# ?????????
-# Assign CRS if not described yet?
-# projection(x) <- CRS("+init=epsg:28992")
-# ?????????
-
-
 # Show headline for EPSG Code table
 output$epsg_head <- renderText({
+  # validate(
+  #   need(epsg_env_detected(), '')
+  # )
   validate(
-    need(epsg_env_detected(), '')
+    need(csvInput(), 'Please upload track data first.')
   )
-  "Found EPSG Code(s) for Uploaded File(s)"
+  if (!is.null(epsg_env_detected())) {
+    "Found EPSG Code(s) for Uploaded File(s)"
+  }
 })
+
 # Sub headline (instructions)
 output$epsg_sub_head <- renderText({
   validate(
@@ -664,8 +665,6 @@ output$epsg_sub_head <- renderText({
   "Please verify and assign an appropriate EPSG code this may vary from the 
   option(s) below."
 })
-
-
 # Data frame of detected EPSG codes
 output$contents_env <- DT::renderDataTable({
   validate(
@@ -690,16 +689,17 @@ output$contents_env <- DT::renderDataTable({
 # Update variable selection based on uploaded data set
 # Show headline for track menu in sidebar
 output$track_head <- renderText({
-  if (!is.null(csvInput())) {
+  if (!is.null(csvInput()) && !is.null(envInput())) {
     "Select Track Variables"
   } else {
-    "Please upload track data first."
+    "Please upload track data and map first."
   }
 })
 # Choose x (location-long)
 output$x <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(envInput(), '')
   )
   selectizeInput(
     inputId = 'x', 
@@ -714,7 +714,8 @@ output$x <- renderUI({
 # Choose y (location-lat)
 output$y <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(envInput(), '')
   )
   selectizeInput(
     inputId = 'y', 
@@ -729,7 +730,8 @@ output$y <- renderUI({
 # ts (timestamp)
 output$ts <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(envInput(), '')
   )
   selectizeInput(
     inputId = 'ts', 
@@ -742,7 +744,7 @@ output$ts <- renderUI({
   )
 })
 # Choices of ID input
-# Remove longitude, latitude and timestamp values 
+# Remove assigned longitude, latitude and timestamp columns
 id_choices <- reactive({
   validate(
     need(input$x, ''),
@@ -750,7 +752,8 @@ id_choices <- reactive({
     need(input$ts, '')
   )
   csv_cols <- colnames(csvInput())
-  pos_x_y_ts <- which(csv_cols %in% c(input$x, input$y, input$ts)) 
+  pos_x_y_ts <- which(csv_cols %in% c(input$x, input$y, input$ts))
+  # Remove assigned longitude, latitude and timestamp columns
   csv_cols[-pos_x_y_ts]
 })
 # id (individual-local-identifier)
@@ -771,7 +774,8 @@ output$id <- renderUI({
 # EPSG Code Transformation of track data (CSV)
 output$epsg_trk <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(envInput(), '')
   )
   selectInput(
     inputId = "epsg_trk",
