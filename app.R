@@ -188,24 +188,27 @@ tabItem(tabName = "track",
     ),
     # Resample track
     column(width = 4, #offset = 1,
-           h4("Resample Track"),
+           h4(textOutput(outputId = "resamp_head")),
+           #h4("Resample Track"),
            #br(),
-           numericInput(
-             inputId = "rate_min",
-             label = "Resampling Rate (in min):",
-             value = NA, #15,
-             min = 0,
-             step = 1
-           ),
+           uiOutput(outputId = "rate_min"),
+           # numericInput(
+           #   inputId = "rate_min",
+           #   label = "Resampling Rate (in min):",
+           #   value = NA, #15,
+           #   min = 0,
+           #   step = 1
+           # ),
            #br(),
            #br(),
-           numericInput(
-             inputId = "tol_min",
-             label = "Tolerance (in min):",
-             value = NA, #2,
-             min = 0,
-             step = 1
-           ),
+           uiOutput(outputId = "tol_min"),
+           # numericInput(
+           #   inputId = "tol_min",
+           #   label = "Tolerance (in min):",
+           #   value = NA, #2,
+           #   min = 0,
+           #   step = 1
+           # ),
            # Date range for track data frame ----
            # dateRangeInput(inputId = "daterange",
            #                label = "Choose a Date Range",
@@ -335,14 +338,15 @@ tabItem(tabName = "model",
            # Headline
            h4(textOutput(outputId = "modeling_head")),
            # Choose a model
-           selectInput(
-             inputId = "model",
-             label = "Choose a Model:",
-             choices = c("Integrated Step Selection Function",
-                         "Resource Selection Function",
-                         ''),
-             selected = ''
-           )
+           uiOutput(outputId = "model")
+           # selectInput(
+           #   inputId = "model",
+           #   label = "Choose a Model:",
+           #   choices = c("Integrated Step Selection Function",
+           #               "Resource Selection Function",
+           #               ''),
+           #   selected = ''
+           # )
            # radioButtons(
            #   inputId = "model",
            #   label = h4("Choose a Model"),
@@ -685,7 +689,6 @@ output$contents_env <- DT::renderDataTable({
 
 # Track Creation ----------------------------------------------------------
 
-
 # Update variable selection based on uploaded data set
 # Show headline for track menu in sidebar
 output$track_head <- renderText({
@@ -743,6 +746,19 @@ output$ts <- renderUI({
     )
   )
 })
+# EPSG Code Transformation of track data (CSV)
+output$epsg_trk <- renderUI({
+  validate(
+    need(csvInput(), ''),
+    need(envInput(), '')
+  )
+  selectInput(
+    inputId = "epsg_trk",
+    label = "Transform CRS by EPSG Code:",
+    choices = na.omit(epsg_data$code),
+    selected = input$epsg_env
+  )
+})
 # Choices of ID input
 # Remove assigned longitude, latitude and timestamp columns
 id_choices <- reactive({
@@ -756,7 +772,7 @@ id_choices <- reactive({
   # Remove assigned longitude, latitude and timestamp columns
   csv_cols[-pos_x_y_ts]
 })
-# id (individual-local-identifier)
+# ID
 output$id <- renderUI({
   validate(
     need(id_choices(), '')
@@ -769,19 +785,6 @@ output$id <- renderUI({
       placeholder = 'Group by ID (optional)',
       onInitialize = I('function() { this.setValue(""); }')
     )
-  )
-})
-# EPSG Code Transformation of track data (CSV)
-output$epsg_trk <- renderUI({
-  validate(
-    need(csvInput(), ''),
-    need(envInput(), '')
-  )
-  selectInput(
-    inputId = "epsg_trk",
-    label = "Transform CRS by EPSG Code:",
-    choices = na.omit(epsg_data$code),
-    selected = input$epsg_env
   )
 })
 # Filter IDs of the track
@@ -797,7 +800,69 @@ output$id_trk <- renderUI({
     selected = sort(unique(dat()$id))[1:length(unique(dat()$id))]
   )
 })
-
+# Resample track headline
+output$resamp_head <- renderText({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
+  "Resample Track"
+})
+# Input: resampling rate in min
+output$rate_min <- renderUI({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
+  numericInput(
+    inputId = "rate_min",
+    label = "Resampling Rate (in min):",
+    value = NA, #15,
+    min = 0,
+    step = 1
+  )
+})
+# Input: tolerance in min
+output$tol_min <- renderUI({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
+  numericInput(
+    inputId = "tol_min",
+    label = "Tolerance (in min):",
+    value = NA, #2,
+    min = 0,
+    step = 1
+  )
+})
+# Dynamic dateRangeInput for track data frame ----
+output$fetch_dr <- renderUI({
+  validate(
+    need(input$ts, ''),
+    need(!is.null(input$id), '')
+  )
+  if (input$id == '') {
+    min.date <- min(dat_excl_id()$ts)
+    max.date <- max(dat_excl_id()$ts)
+  } else {
+    min.date <- min(dat()$ts)
+    max.date <- max(dat()$ts)
+  }
+  dateRangeInput(inputId = "daterange",
+                 label = "Choose a Date Range:",
+                 start = min.date,
+                 # Does not include upper bound therefore plus 1 day
+                 end = as.Date(max.date) + 1,
+                 max = Sys.Date(),
+                 format = "yyyy-mm-dd",
+                 separator = "to",
+                 startview = "year"
+  )
+})
 # Create a track: select relevant columns and omit NAs
 dat <- reactive({
   validate(
@@ -807,7 +872,6 @@ dat <- reactive({
   select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
   na.omit()
 })
-
 # Create a track: select relevant columns and omit NAs (excluding ID)
 dat_excl_id <- reactive({
   validate(
@@ -1062,39 +1126,14 @@ output$summary_trk <- renderPrint({
   }
 })
 
-# Dynamic dateRangeInput for track data frame ----
-
-output$fetch_dr <- renderUI({
-  validate(
-    need(input$ts, ''),
-    need(!is.null(input$id), '')
-  )
-  if (input$id == '') {
-    min.date <- min(dat_excl_id()$ts)
-    max.date <- max(dat_excl_id()$ts)
-  } else {
-    min.date <- min(dat()$ts)
-    max.date <- max(dat()$ts)
-  }
-  dateRangeInput(inputId = "daterange",
-                 label = "Choose a Date Range:",
-                 start = min.date,
-                 # Does not include upper bound therefore plus 1 day
-                 end = as.Date(max.date) + 1,
-                 max = Sys.Date(),
-                 format = "yyyy-mm-dd",
-                 separator = "to",
-                 startview = "year"
-  )
-})
-
 
 # Add Additional Covariates -----------------------------------------------
 
 # Show headline for "Minimum No. of Relocations per Burst" drop down
 output$min_burst_head <- renderText({
   validate(
-    need(input$rate_min && input$tol_min,
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0),
          'Please resample the track on previous tab first.')
   )
   "Restrict Bursts of Resampled Track"
@@ -1102,7 +1141,8 @@ output$min_burst_head <- renderText({
 # Only retain bursts with a minimum number of relocations
 output$min_burst <- renderUI({
   validate(
-    need(input$rate_min && input$tol_min, '')
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
   numericInput(
     inputId = "min_burst",
@@ -1252,19 +1292,25 @@ output$contents_bursts <- DT::renderDataTable({
 # Show headline for time of day drop down
 output$tod_head <- renderText({
   validate(
-    need(input$rate_min && input$tol_min, '')
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
   "Time of Day Covariate"
 })
 # Sub headline (instruction when to use)
 output$tod_sub_head <- renderText({
   validate(
-    need(input$rate_min && input$tol_min, '')
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
   "Applicable when building a model with integrated step selection function only."
 })
 # Time of Day
 output$tod <- renderUI({
+  validate(
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+  )
   selectInput(
     inputId = "tod",
     label = "Time of Day:",
@@ -1279,9 +1325,7 @@ output$tod <- renderUI({
 # Interaction terms can be applied only to factors with 2 or more levels
 tod_df <- reactive({
   validate(
-    need(input$min_burst, ''),
-    need(bursts_df(), ''),
-    need(input$tod != '', '')
+    need(input$tod, '')
   )
   # Multiple IDs selected
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
@@ -1423,14 +1467,18 @@ output$contents_tod <- DT::renderDataTable({
 # Show headline for environmental covariates data frame
 output$env_info_head <- renderText({
   validate(
-    need(envInput(), 'Please upload map with environmental covariates first.')
+    need(envInput(), ''),
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
   "Environmental Covariates"
 })
 # Show sub headline (instructions) for environmental covariates data frame
 output$env_info_sub_head <- renderText({
   validate(
-    need(envInput(), '')
+    need(envInput(), ''),
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
   "Change names of covariates and convert to categorical or continuous variable."
 })
@@ -1439,12 +1487,13 @@ env_info <- reactive({
   validate(
     need(envInput(), '')
   )
-  #For initial data upload
+  # For initial data upload (no handsontable input by user)
   if (is.null(input$env_df)) {
     data.frame("Covariate" = names(envInput()), 
                "Categorical" = rep(TRUE, length(names(envInput()))),
                stringsAsFactors = FALSE)
   } else {
+    # Handsontable input
     # Convert handsontable data to R object
     hot_to_r(input$env_df)
   }
@@ -1452,7 +1501,9 @@ env_info <- reactive({
 # Environmental covariates of raster layer or raster stack
 output$env_df = renderRHandsontable({
   validate(
-    need(env(), '')
+    need(env(), ''),
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
   rhandsontable(env_info(), rowHeaders = NULL) %>%
     # Center checkbox column "Categorical"
@@ -1469,9 +1520,24 @@ output$modeling_head <- renderText({
   )
   "Conditional Logit Model"
 })
+# Choose a model
+output$model <- renderUI({
+  validate(
+    need(input$min_burst, '')
+  )
+  selectInput(
+    inputId = "model",
+    label = "Choose a Model:",
+    choices = c("Integrated Step Selection Function",
+                "Resource Selection Function",
+                ''),
+    selected = ''
+  )
+})
 # Set number of random steps per relocation
 output$rand_stps <- renderUI({
   validate(
+    need(input$min_burst, ''),
     need(input$model == "Integrated Step Selection Function", '')
   )
   numericInput(
@@ -1485,6 +1551,7 @@ output$rand_stps <- renderUI({
 # Set random points (RSF)
 output$rand_points <- renderUI({
   validate(
+    need(input$min_burst, ''),
     need(input$model == "Resource Selection Function", '')
   )
   numericInput(
@@ -1497,6 +1564,9 @@ output$rand_points <- renderUI({
 })
 # Variable choices for variable and interaction term drop downs
 var_choices <- reactive({
+  validate(
+    need(mod_pre_var(), '')
+  )
   # Positions of variables not to include in choices
   pos_excl <- which(sort(names(mod_pre_var())) %in% c(
     "case_", "dt_", "x_", "y_", "x1_", "x2_", "y1_", "y2_", "t1_", "t2_", 
