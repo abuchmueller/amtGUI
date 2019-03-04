@@ -1568,11 +1568,11 @@ var_choices <- reactive({
     need(mod_pre_var(), '')
   )
   # Positions of variables not to include in choices
-  pos_excl <- which(sort(names(mod_pre_var())) %in% c(
+  pos_excl <- which(mod_pre_var() %in% c(
     "case_", "dt_", "x_", "y_", "x1_", "x2_", "y1_", "y2_", "t1_", "t2_", 
     "burst_", "step_id_")
   )
-  sort(names(mod_pre_var()))[-pos_excl]
+  sort(mod_pre_var()[-pos_excl])
 })
 # Filter model variables
 output$mod_var <- renderUI({
@@ -1972,21 +1972,19 @@ mod_pre_var <- reactive({
     need(mod_pre(), ''),
     need(input$model != '', '')
   )
-  # Multiple IDs selected (individual models)
+  # Multiple IDs selected (single models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     if (input$model == "Resource Selection Function") {
-      # column names only using colnames() doesn't work here!
-      mod_pre()$points[[1]] %>% head(n=0)
+      # Get column names
+      colnames(mod_pre()$points[[1]])
     } else if (input$model == "Integrated Step Selection Function") {
-      mod_pre()$steps[[1]] %>% head(n=0) # column names only
+      # Get column names
+      colnames(mod_pre()$steps[[1]])
     }
   } else {
-    # One/ no ID selected (single model)
-    if (input$model == "Resource Selection Function") {
-      mod_pre() %>% head(n=0) # column names only
-    } else if (input$model == "Integrated Step Selection Function") {
-      mod_pre() %>% head(n=0) # column names only
-    }
+    # One/ no ID selected
+    # Get column names
+    colnames(mod_pre())
   }
 })
 
