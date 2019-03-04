@@ -237,12 +237,7 @@ tabItem(tabName = "track",
           column(width = 1,
                  br(),
                  br(),
-                 radioButtons(
-                   inputId = "display_trk",
-                   label = "Display",
-                   choices = c("Data Frame", "Column Summary"),
-                   selected = "Data Frame"
-                 )
+                 uiOutput(outputId = "display_trk")
           ),
           # Data table or summary
           column(width = 11, #offset = 1,
@@ -862,6 +857,17 @@ output$fetch_dr <- renderUI({
                  separator = "to",
                  startview = "year"
   )
+})
+# Display data frame or column summary of track 
+output$display_trk <- renderUI({
+  if (!is.null(csvInput()) && !is.null(envInput())) {
+    radioButtons(
+      inputId = "display_trk",
+      label = "Display",
+      choices = c("Data Frame", "Column Summary"),
+      selected = "Data Frame"
+    )
+  }
 })
 # Create a track: select relevant columns and omit NAs
 dat <- reactive({
