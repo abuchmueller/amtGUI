@@ -1701,6 +1701,8 @@ mod_pre <- reactive({
     need(trk_resamp(), ''),
     need(input$model, '')
   )
+  # Show progress indicator to user
+  withProgress(message = 'Model preparation', value = 0.5, {
   # Multiple IDs selected (individual models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     # Keep all IDs meeting chosen minimum no. of relocations per burst
@@ -1709,7 +1711,7 @@ mod_pre <- reactive({
 
     if (input$model == "Resource Selection Function") {
       validate(
-        need(input$rand_points, 'Please set no. of random points.')
+        need(input$rand_points, '')
       )
       t_res <- t_res %>% mutate(points = lapply(track, function(x) {
         x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
@@ -1740,7 +1742,7 @@ mod_pre <- reactive({
       t_res
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
-        need(input$rand_stps, 'Please set no. of random steps.')
+        need(input$rand_stps, '')
       )
       # Time of day is not selected
       if (input$tod == '') {
@@ -1848,7 +1850,7 @@ mod_pre <- reactive({
     # One/ no ID selected (single model)
     if (input$model == "Resource Selection Function") {
       validate(
-        need(input$rand_points, 'Please set no. of random points.')
+        need(input$rand_points, '')
       )
       set.seed(12345)
       t_res <- trk_resamp() %>% 
@@ -1874,7 +1876,7 @@ mod_pre <- reactive({
       t_res
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
-        need(input$rand_stps, 'Please set no. of random steps.')
+        need(input$rand_stps, '')
       )
       # Time of day is not selected
       if (input$tod == '') {
@@ -1965,6 +1967,7 @@ mod_pre <- reactive({
     }
   }
 })
+})
 
 # Get variable names
 mod_pre_var <- reactive({
@@ -2047,6 +2050,8 @@ mod <- reactive({
     need(input$model, 'Please choose a model.'),
     need(values_model$model_state == 'fit', '')
   )
+  # Show progress indicator to user
+  withProgress(message = 'Fitting model', value = 0.5, {
   # Multiple IDs selected (individual models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     
@@ -2103,6 +2108,7 @@ mod <- reactive({
       broom::tidy(issf_one_fit$model) %>% tibble::as.tibble()
     }
   }
+})
 })
 
 # Output data frame with coefficients
