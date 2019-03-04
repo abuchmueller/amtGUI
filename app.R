@@ -763,7 +763,10 @@ output$display_trk <- renderUI({
 # Create a track: select relevant columns and omit NAs
 dat <- reactive({
   validate(
-    need(csvInput(), '')
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, ''),
+    need(input$id, '')
   )
   csvInput() %>% 
   select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
@@ -772,7 +775,9 @@ dat <- reactive({
 # Create a track: select relevant columns and omit NAs (excluding ID)
 dat_excl_id <- reactive({
   validate(
-    need(csvInput(), '')
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
   )
   csvInput() %>% 
     select(x = input$x, y = input$y, ts = input$ts) %>%  
@@ -806,9 +811,13 @@ trk <- reactive({
     }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     # Multiple IDs selected (individual models)
-    # Subset data according to selected dateRangeInput
     dat_df <- dat() %>% 
-      filter(ts >= input$daterange[1] & ts <= input$daterange[2])
+      filter(
+        # Subset filtered IDs
+        id %in% input$id_trk,
+        # Subset data according to selected dateRangeInput
+        ts >= input$daterange[1] & ts <= input$daterange[2]
+      )
     # Assign known EPSG Code to track data (no transformation necessary)
     if (input$epsg_csv == input$epsg_trk) {
       track_multi <- dat_df %>% nest(-id) %>%
@@ -817,8 +826,7 @@ trk <- reactive({
                                                             input$epsg_csv))
           )
         }))
-      # Subset filtered ID(s)
-      track_multi[track_multi$id %in% input$id_trk, ]
+      track_multi
     } else {
       # Transform CRS of track
       trk_multi_tr <- dat_df %>% nest(-id) %>%
@@ -828,22 +836,22 @@ trk <- reactive({
             amt::transform_coords(sp::CRS(paste0("+init=epsg:", input$epsg_trk))
             )
         }))
-      # Subset filtered ID(s)
-      trk_multi_tr[trk_multi_tr$id %in% input$id_trk, ]
+      trk_multi_tr
     }
   } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
     # One ID selected
-    # Subset data according to selected dateRangeInput
     dat_df <- dat() %>% 
-      filter(ts >= input$daterange[1] & ts <= input$daterange[2])
+      filter(
+        # Subset filtered ID
+        id == input$id_trk,
+        # Subset data according to selected dateRangeInput
+        ts >= input$daterange[1] & ts <= input$daterange[2]
+      )
     # Assign known EPSG Code to track data
     track_one <- make_track(dat_df,
                             x, y, ts, id = id,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
-    # Subset filtered ID(s)
-    track_one <- track_one[track_one$id %in% input$id_trk, ]
-
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
       track_one
