@@ -1699,7 +1699,7 @@ output$inter_5 <- renderUI({
 mod_pre <- reactive({
   validate(
     need(trk_resamp(), ''),
-    need(input$model != '', '')
+    need(input$model, '')
   )
   # Multiple IDs selected (individual models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
@@ -1969,8 +1969,7 @@ mod_pre <- reactive({
 # Get variable names
 mod_pre_var <- reactive({
   validate(
-    need(mod_pre(), ''),
-    need(input$model != '', '')
+    need(mod_pre(), '')
   )
   # Multiple IDs selected (single models)
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
@@ -2045,7 +2044,7 @@ observeEvent(input$clear_button, {
 # Fit model
 mod <- reactive({
   validate(
-    need(input$model != '', 'Please choose a model.'),
+    need(input$model, 'Please choose a model.'),
     need(values_model$model_state == 'fit', '')
   )
   # Multiple IDs selected (individual models)
@@ -2109,8 +2108,7 @@ mod <- reactive({
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
   validate(
-    need(input$model != '', ''),
-    need(values_model$model_state == 'fit', '')
+    need(mod(), '')
   )
   # Dependent on fit button above
   DT::datatable(
