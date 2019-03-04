@@ -71,7 +71,6 @@ ui <- dashboardPage(skin = "green",
                            "text/comma-separated-values,text/plain", ".csv")
               ),
               actionButton('reset', 'Reset Input'),
-              #hr(),
               # Input: Checkbox if file has header
               checkboxInput(
                 inputId = "header",
@@ -105,7 +104,7 @@ ui <- dashboardPage(skin = "green",
               selectInput(
                 inputId = "epsg_csv",
                 label = "Assign EPSG Code:",
-                choices = sort(na.omit(epsg_data$code)), #rgdal::make_EPSG()["code"]
+                choices = sort(na.omit(epsg_data$code)),
                 selected = 4326
               ),
               hr(),
@@ -139,19 +138,13 @@ ui <- dashboardPage(skin = "green",
                         inputId = "dataset_env",
                         label = "Choose TIF File",
                         multiple = TRUE
-                        #accept = c("tif", ".tif")
                       ),
                       # Action button to reset input
                       actionButton('reset_env', 'Reset Input'),
                       # Horizontal line
                       hr(),
-                      # Example Datasets
+                      # Example data set
                       uiOutput(outputId = "ex_data_env"),
-                      # selectInput(
-                      #   inputId = "ex_data_env",
-                      #   label = "Choose Example Data:",
-                      #   choices = c("None", "Fisher NY Land Use Area")
-                      # ),
                       # EPSG Code TIF
                       uiOutput(outputId = "epsg_env")
                     ),
@@ -170,16 +163,14 @@ ui <- dashboardPage(skin = "green",
 tabItem(tabName = "track",
   fluidRow(
     # Create a track
-    column(width = 4, #offset = 1,
+    column(width = 4,
            h4(textOutput(outputId = "track_head")),
-           #h4("Create a track"),
            uiOutput(outputId = "x"),
            uiOutput(outputId = "y"),
-           uiOutput(outputId = "ts")#,
-           # uiOutput(outputId = "id")
+           uiOutput(outputId = "ts")
     ),
     # Transform EPSG Codes of CSV and TIF and select ID(s)
-    column(width = 4, #offset = 1,
+    column(width = 4,
            br(),
            br(),
            uiOutput(outputId = "epsg_trk"),
@@ -187,38 +178,10 @@ tabItem(tabName = "track",
            uiOutput(outputId = "id_trk")
     ),
     # Resample track
-    column(width = 4, #offset = 1,
+    column(width = 4,
            h4(textOutput(outputId = "resamp_head")),
-           #h4("Resample Track"),
-           #br(),
            uiOutput(outputId = "rate_min"),
-           # numericInput(
-           #   inputId = "rate_min",
-           #   label = "Resampling Rate (in min):",
-           #   value = NA, #15,
-           #   min = 0,
-           #   step = 1
-           # ),
-           #br(),
-           #br(),
            uiOutput(outputId = "tol_min"),
-           # numericInput(
-           #   inputId = "tol_min",
-           #   label = "Tolerance (in min):",
-           #   value = NA, #2,
-           #   min = 0,
-           #   step = 1
-           # ),
-           # Date range for track data frame ----
-           # dateRangeInput(inputId = "daterange",
-           #                label = "Choose a Date Range",
-           #                start = min(trk()$ts),
-           #                end = max(trk()$ts),
-           #                max = Sys.Date(),
-           #                format = "yyyy-mm-dd",
-           #                separator = "to",
-           #                startview = "year"
-           #                )
            uiOutput(
              outputId = 'fetch_dr'
            )
@@ -240,7 +203,7 @@ tabItem(tabName = "track",
                  uiOutput(outputId = "display_trk")
           ),
           # Data table or summary
-          column(width = 11, #offset = 1,
+          column(width = 11,
                  DT::dataTableOutput(outputId = "contents_trk"),
                  verbatimTextOutput(outputId = "summary_trk")
           )
@@ -248,7 +211,7 @@ tabItem(tabName = "track",
         tabPanel(
           title = "Summary of Sampling Rate",
           # Data table: summary of sampling rate
-          column(width = 12, #offset = 1,
+          column(width = 12,
                  h4(textOutput(outputId = "samp_rate_head")),
                  DT::dataTableOutput(outputId = "summary_samp_rate")
           )
@@ -256,29 +219,6 @@ tabItem(tabName = "track",
       )
     )
   )
-  # fluidRow(
-  #   # Data table or summary
-  #   column(width = 5, #offset = 1,
-  #          DT::dataTableOutput(outputId = "contents_trk"),
-  #          verbatimTextOutput(outputId = "summary_trk")
-  #   ),
-  #   # Input: Select data table or summary of track
-  #   column(width = 1,
-  #          br(),
-  #          br(),
-  #          radioButtons(
-  #            inputId = "display_trk",
-  #            label = "Display",
-  #            choices = c("Data Frame", "Summary"),
-  #            selected = "Data Frame"
-  #          )
-  #   ),
-  #   # Data table: summary of sampling rate
-  #   column(width = 4, #offset = 1,
-  #          h4(textOutput(outputId = "samp_rate_head")),
-  #          DT::dataTableOutput(outputId = "summary_samp_rate")
-  #   )
-  # )
 ),
 
 # Add Additional Covariates Tab -------------------------------------------
@@ -334,29 +274,6 @@ tabItem(tabName = "model",
            h4(textOutput(outputId = "modeling_head")),
            # Choose a model
            uiOutput(outputId = "model")
-           # selectInput(
-           #   inputId = "model",
-           #   label = "Choose a Model:",
-           #   choices = c("Integrated Step Selection Function",
-           #               "Resource Selection Function",
-           #               ''),
-           #   selected = ''
-           # )
-           # radioButtons(
-           #   inputId = "model",
-           #   label = h4("Choose a Model"),
-           #   choices = c("Resource Selection Function",
-           #               "Integrated Step Selection Function",
-           #               "None"),
-           #   selected = "None"
-           # ),
-           # # Fit model button
-           # actionButton("fit_button", "Fit Model", icon = icon("poll")), #, width = "112%"),
-           # # Clear button
-           # actionButton("clear_button", "Clear Model", icon = icon("poll")), #, width = "112%"),
-           # br(),
-           # # Download button for model output
-           # downloadButton("downloadData", "Download")
     ),
     column(
       width = 3,
@@ -371,17 +288,7 @@ tabItem(tabName = "model",
   fluidRow(
     column(width = 4,
            br(),
-           # br(),
-           # Select land use area
-           #uiOutput(outputId = "lu"),
-           # Assign land use covariate name
-           #uiOutput(outputId = "lu_name"),
-           # Select model variables
-           uiOutput(outputId = "mod_var")#,
-           # Select no. of interaction terms to add
-           #uiOutput(outputId = "inter_no")
-           # Select logarithmized model variables
-           #uiOutput(outputId = "log_var")
+           uiOutput(outputId = "mod_var")
     ),
     column(
       width = 3,
@@ -391,14 +298,6 @@ tabItem(tabName = "model",
     )
   ),
   fluidRow(
-    # column(width = 2,
-    #        # Select 1st to 5th interaction
-    #        uiOutput(outputId = "inter_1"),
-    #        uiOutput(outputId = "inter_2"),
-    #        uiOutput(outputId = "inter_3"),
-    #        uiOutput(outputId = "inter_4"),
-    #        uiOutput(outputId = "inter_5")
-    #        )
     column(width = 2,
            # Select 1st interaction
            uiOutput(outputId = "inter_1")
@@ -436,12 +335,11 @@ tabItem(tabName = "model",
     column(width = 5,
         br(),
         DT::dataTableOutput(outputId = "contents_mod")
-        #plotOutput(outputId = "mod_plot")
     )
   )
 )
 
-# End UI!!!
+# End UI
 )))
 
 
@@ -459,7 +357,6 @@ server <- function(input, output, session) {
 # or summary if selected, will be shown.
 
 # Increase maximum upload size from 5 MB to 30 MB
-#old <- options(shiny.maxRequestSize = 5*1024^2)
 options(shiny.maxRequestSize = 30*1024^2)
 
 # Upload data and reset-button to switch between upload and R data sets
@@ -515,9 +412,6 @@ csvInput <- reactive({
 })
 # Display data frame or summary of data
 output$contents <- DT::renderDataTable({
-  # validate(
-  #   need(csvInput(), '') # displays summary below table area when selected
-  # )
   if (!is.null(csvInput())) {
     if (input$display == "Data Frame") {
       DT::datatable(csvInput(), 
@@ -645,9 +539,6 @@ output$epsg_env <- renderUI({
 })
 # Show headline for EPSG Code table
 output$epsg_head <- renderText({
-  # validate(
-  #   need(epsg_env_detected(), '')
-  # )
   validate(
     need(csvInput(), 'Please upload track data first.')
   )
@@ -693,7 +584,7 @@ output$track_head <- renderText({
     "Please upload track data and map first."
   }
 })
-# Choose x (location-long)
+# Choose x (longitude)
 output$x <- renderUI({
   validate(
     need(csvInput(), ''),
@@ -704,12 +595,12 @@ output$x <- renderUI({
     label = "Longitude:", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign longitude', # 'Please select an option below'
+      placeholder = 'Assign longitude',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
 })
-# Choose y (location-lat)
+# Choose y (latitude)
 output$y <- renderUI({
   validate(
     need(csvInput(), ''),
@@ -725,7 +616,7 @@ output$y <- renderUI({
     )
   )
 })
-# ts (timestamp)
+# Choose ts (timestamp)
 output$ts <- renderUI({
   validate(
     need(csvInput(), ''),
@@ -903,7 +794,7 @@ trk <- reactive({
     dat_excl_id_df <- dat_excl_id() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
     # Assign known EPSG Code to track data
-    track <- make_track(dat_excl_id_df, #dat_excl_id(), 
+    track <- make_track(dat_excl_id_df,
                         x, y, ts,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
@@ -920,7 +811,7 @@ trk <- reactive({
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
     # Assign known EPSG Code to track data (no transformation necessary)
     if (input$epsg_csv == input$epsg_trk) {
-      track_multi <- dat_df %>% nest(-id) %>% #dat() %>% nest(-id) %>%
+      track_multi <- dat_df %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste0("+init=epsg:",
                                                             input$epsg_csv))
@@ -930,7 +821,7 @@ trk <- reactive({
       track_multi[track_multi$id %in% input$id_trk, ]
     } else {
       # Transform CRS of track
-      trk_multi_tr <- dat_df %>% nest(-id) %>% #dat() %>% nest(-id) %>%
+      trk_multi_tr <- dat_df %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
           amt::make_track(d, x, y, ts, crs = sp::CRS(paste0(
             "+init=epsg:", input$epsg_csv))) %>%
@@ -946,7 +837,7 @@ trk <- reactive({
     dat_df <- dat() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
     # Assign known EPSG Code to track data
-    track_one <- make_track(dat_df, #dat(), 
+    track_one <- make_track(dat_df,
                             x, y, ts, id = id,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
@@ -1019,7 +910,7 @@ output$summary_samp_rate <- DT::renderDataTable({
   }
 })
 
-# Resample track (this will be used for model building not trk_df)!!!!!!!!!!!!!!
+# Resample track (this will be used for model building not trk_df)
 trk_resamp <- reactive({
   validate(
     need(input$rate_min, ''),
@@ -1032,16 +923,10 @@ trk_resamp <- reactive({
         x %>% amt::track_resample(rate = minutes(input$rate_min),
                                   tolerance = minutes(input$tol_min))
       }))
-    # group_by(trk(), id) %>% nest() %>%
-    #   mutate(data = map(data, ~ .x %>%
-    #                       track_resample(rate = minutes(input$rate_min),
-    #                                      tolerance = minutes(input$tol_min))))
-
   } else {
     # One/ no ID selected
     trk() %>% track_resample(rate = minutes(input$rate_min),
-                             tolerance = minutes(input$tol_min))  #%>%
-      #filter(t_ >= input$daterange[1] & t_ <= input$daterange[2])
+                             tolerance = minutes(input$tol_min))
   }
 })
 #trk_df()####
@@ -1153,7 +1038,7 @@ output$min_burst <- renderUI({
   numericInput(
     inputId = "min_burst",
     label = "Minimum No. of Relocations per Burst:",
-    value = 3, #NA,
+    value = 3,
     min = 1,
     step = 1
   )
@@ -1323,7 +1208,7 @@ output$tod <- renderUI({
     choices = c('',
                 "excl. dawn and dusk" = FALSE, 
                 "incl. dawn and dusk" = TRUE),
-    selected = '' #"excl. dawn and dusk"
+    selected = ''
   )
 })
 # Time of Day info data frame
@@ -1549,7 +1434,7 @@ output$rand_stps <- renderUI({
   numericInput(
     inputId = "rand_stps",
     label = "Random Steps:",
-    value = 3, #10, #NA,
+    value = 3,
     min = 1,
     step = 1
 )
@@ -1676,30 +1561,6 @@ output$inter_5 <- renderUI({
     options = list(maxItems = 2)
   )
 })
-# Select land use covariate
-# output$lu <- renderUI({
-#   # validate(
-#   #   need(mod_pre(), '')
-#   # )
-#   selectInput(
-#     inputId = "lu",
-#     label = "Choose Land Use Area:",
-#     choices = c('', sort(unique(raster::values(env())))),
-#     selected = NULL
-#   )
-# })
-# # Assign land use covariate name
-# output$lu_name <- renderUI({
-#   # validate(
-#   #   need(mod_pre(), '')
-#   # )
-#   textInput(
-#     inputId = "lu_name",
-#     label = "Assign Name to Land Use Covariate:",
-#     placeholder = "Please type in a name.",
-#     value = NULL
-#   )
-# })
 
 # Fit model (data preparation)
 mod_pre <- reactive({
@@ -2028,12 +1889,6 @@ mod_all_var <- reactive({
   # Concatenate all variable types
   paste0(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5)
 })
-
-# Fit button (to start model fitting)
-# fit <- eventReactive(input$fit_button, {
-#   # Run model fitting part below
-#   mod()
-# })
 
 # Clear model button (works for inputs only)
 observeEvent(input$clear_button, {
