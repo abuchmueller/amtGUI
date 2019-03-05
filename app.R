@@ -324,11 +324,13 @@ tabItem(tabName = "model",
     column(
       width = 2,
       # Fit model button
-      actionButton("fit_button", "Fit Model", icon = icon("poll")), #, width = "112%")
+      actionButton("fit_button", "Fit Model", icon = icon("poll")),
       # Clear button
-      actionButton("clear_button", "Clear Model", icon = icon("poll")), #, width = "112%")
-      # Download button for model output
-      downloadButton("downloadData", "Download")
+      actionButton("clear_button", "Clear Model", icon = icon("poll")),
+      # Download button for model estimates
+      downloadButton("downloadData", "Download estimates"),
+      # Download button for user reports
+      downloadButton("report", "Download report")
     )
   ),
   fluidRow(
@@ -2001,6 +2003,54 @@ output$downloadData <- downloadHandler(
   content = function(file) {
     write.csv(mod(), file, row.names = FALSE)
   }
+)
+
+# Download handler for user reports ----
+output$report <- downloadHandler(
+  # Filename of report. Suffix needs match YAML header of Rmd
+  filename = "report.html",
+  content = function(file) {
+    # Copy report to temporary directory in case user lacks writing permission
+    # for working directory
+    tempReport <- file.path(tempdir(), "report.Rmd")
+    file.copy("report.Rmd", tempReport, overwrite = TRUE)
+    
+    # Set up parameters to pass to Rmd document
+    params <- list(dataset = input$dataset_csv,
+                   dataset_env = input$dataset_env,
+                   epsg_csv = input$epsg_csv,
+                   epsg_env = input$epsg_env,
+                   epsg_trk = input$epsg_trk,
+                   x = input$x,
+                   y = input$y,
+                   ts = input$ts,
+                   id = input$id,
+                   id_trk = input$id_trk,
+                   date_range = input$daterange,
+                   tolerance = input$tol_min,
+                   resamp_rate = input$rate_min,
+                   model = input$model,
+                   mod_var = input$mod_var,
+                   inter_no = input$inter_no,
+                   inter_1 = input$inter_1,
+                   inter_2 = input$inter_2,
+                   inter_3 = input$inter_3,
+                   inter_4 = input$inter_4,
+                   inter_5 = input$inter_5,
+                   rand_stps = input$rand_stps,
+                   min_burst = input$min_burst,
+                   tod = input$tod
+    )
+    
+    # Knit the document, passing in the `params` list, and eval it in a
+    # child of the global environment (this isolates the code in the document
+    # from the code in this app).
+    rmarkdown::render(tempReport, output_file = file,
+                      params = params,
+                      envir = new.env(parent = globalenv())
+    )
+  }
+  
 )
 
 
