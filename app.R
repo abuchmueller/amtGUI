@@ -123,7 +123,11 @@ ui <- dashboardPage(skin = "green",
             )
           ),
           mainPanel = mainPanel(
-            DT::dataTableOutput(outputId = "contents"),
+            # Add horizontal scroll bar to data table
+            div(
+              style = 'overflow-x: scroll', 
+              DT::dataTableOutput(outputId = "contents")
+            ),
             verbatimTextOutput(outputId = "summary")
           )
         )
@@ -1024,7 +1028,7 @@ output$contents_trk <- DT::renderDataTable({
   if (input$display_trk == "Data Frame") {
     DT::datatable(
       # Round numeric columns
-      trk_df() %>% dplyr::mutate_if(is.numeric, round, 2),
+      trk_df() %>% dplyr::mutate_if(is.numeric, round, 1),
       rownames = FALSE,
       options = list(searching = FALSE,
                      lengthMenu = list(
