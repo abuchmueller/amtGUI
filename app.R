@@ -322,15 +322,17 @@ tabItem(tabName = "model",
   ), # End of clear inputs
   fluidRow(
     column(
-      width = 2,
+      width = 12,
+      # Clear button
+      actionButton("clear_button", "Clear", icon = icon("times-circle")),
       # Fit model button
       actionButton("fit_button", "Fit Model", icon = icon("poll")),
-      # Clear button
-      actionButton("clear_button", "Clear Model", icon = icon("poll")),
       # Download button for model estimates
       downloadButton("downloadData", "Download estimates"),
       # Download button for user reports
       downloadButton("report", "Download report")
+    )
+      )
     )
   ),
   fluidRow(
@@ -342,7 +344,7 @@ tabItem(tabName = "model",
 )
 
 # End UI
-)))
+)
 
 
 # Server ------------------------------------------------------------------
