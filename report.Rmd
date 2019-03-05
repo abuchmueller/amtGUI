@@ -1,0 +1,130 @@
+---
+title: "`amtGUI` User Report"
+output: html_document
+params:
+  dataset: NA
+  dataset_env: NA 
+  epsg_csv: NA
+  epsg_env: NA
+  epsg_trk: NA
+  x: NA
+  y: NA
+  ts: NA
+  id: NA
+  id_trk: NA 
+  date_range: NA
+  resamp_rate: NA
+  tolerance: NA
+  model: NA 
+  mod_var: NA
+  inter_no: NA
+  inter_1: NA
+  inter_2: NA
+  inter_3: NA
+  inter_4: NA
+  inter_5: NA 
+  rand_stps: NA
+  min_burst: NA 
+  tod: NA
+  
+---
+<br>
+This user report serves as a simple way to reproduce the results of previous `amtGUI` sessions.  
+You can save this file and reproduce your previous analysis using the input values below.
+
+***
+
+##### Uploaded dataset
+```{r csv Input, echo=FALSE}
+params$dataset
+```
+
+##### Uploaded environmental data
+```{r environment, echo=FALSE}
+params$dataset_env
+```
+
+##### EPSG Code detected in csv
+```{r echo=FALSE}
+params$epsg_csv
+```
+
+##### EPSG detected in map
+```{r echo=FALSE}
+params$epsg_env
+```
+
+##### EPSG used in track creation
+```{r echo=FALSE}
+params$epsg_trk
+```
+
+##### User input for x, y coordinates, timestamp and ID columns
+```{r echo=FALSE}
+params$x
+params$y
+params$ts
+params$id
+```
+
+##### User selected ID's for track creation
+```{r echo=FALSE}
+params$id_trk
+```
+
+##### Choosen date range 
+```{r echo=FALSE}
+params$date_range
+```
+
+##### Resampling rate
+```{r echo=FALSE}
+params$resamp_rate
+```
+
+##### Tolerance 
+```{r echo=FALSE}
+params$tolerance
+```
+
+##### Model type 
+```{r echo=FALSE}
+params$model
+```
+
+##### Model covariates
+```{r echo=FALSE}
+params$mod_var
+```
+
+##### Number of interaction terms
+```{r echo=FALSE}
+params$inter_no
+```
+
+##### Interaction terms used
+```{r echo=FALSE}
+params$inter_1
+params$inter_2
+params$inter_3
+params$inter_4
+params$inter_5
+```
+
+##### Number of random steps used
+```{r echo=FALSE}
+params$rand_stps
+```
+
+##### Number of bursts set
+```{r echo=FALSE}
+params$min_burst
+```
+
+##### Time of day included
+```{r echo=FALSE}
+params$tod
+```
+
+
+
