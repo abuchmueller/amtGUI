@@ -34,11 +34,17 @@ epsg_data <- rgdal::make_EPSG()
 
 ui <- dashboardPage(skin = "green",
   
-  dashboardHeader(title = "amtGUI"),
+  dashboardHeader(
+    title = "amtGUI",
+    # Set width in pixels
+    titleWidth = 180
+  ),
 
 # Sidebar -----------------------------------------------------------------
 
   dashboardSidebar(
+    # Set width in pixels
+    width = 180,
     sidebarMenu(
       menuItem("Data Upload", tabName = "data", icon = icon("file-upload")),
       menuItem("Upload Map", tabName = "map", icon = icon("upload")),
@@ -56,290 +62,307 @@ ui <- dashboardPage(skin = "green",
 
 # Data Upload Tab ---------------------------------------------------------
 
-      tabItem(tabName = "data",
-        fluidPage(
-          # Sidebar layout with input and output definitions
-          sidebarLayout(
-            sidebarPanel = sidebarPanel(
-              width = 3,
-              # Input: Select a file
-              fileInput(
-                inputId = "dataset_csv",
-                label = "Choose CSV File",
-                multiple = TRUE,
-                accept = c("text/csv",
-                           "text/comma-separated-values,text/plain", ".csv")
-              ),
-              actionButton('reset', 'Reset Input'),
-              # Input: Checkbox if file has header
-              checkboxInput(
-                inputId = "header",
-                label = "File has Header",
-                value = TRUE
-              ),
-              # Input: Select separator
-              radioButtons(
-                inputId = "sep",
-                label = "Separator",
-                choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
-                selected = ","
-              ),
-              # Input: Select quotes
-              radioButtons(
-                inputId = "quote",
-                label = "Quote",
-                choices = c(None = "", "Double Quote" = '"', 
-                            "Single Quote" = "'"),
-                selected = '"'
-              ),
-              # Horizontal line
-              hr(),
-              # Example Datasets
-              selectInput(
-                inputId = "ex_data_csv",
-                label = "Choose Example Data:",
-                choices = c("None", "Fisher NY")
-              ),
-              # Input: Select EPSG Code
-              selectInput(
-                inputId = "epsg_csv",
-                label = "Assign EPSG Code:",
-                choices = sort(na.omit(epsg_data$code)),
-                selected = 4326
-              ),
-              hr(),
-              #Input: Select data table or summary of data set
-              radioButtons(
-                inputId = "display",
-                label = "Display",
-                choices = c("Data Frame", "Column Summary"),
-                selected = "Data Frame"
-              )
+      tabItem(
+        tabName = "data",
+        # Sidebar layout with input and output definitions
+        sidebarLayout(
+          sidebarPanel = sidebarPanel(
+            width = 3,
+            # Input: Select a file
+            fileInput(
+              inputId = "dataset_csv",
+              label = "Choose CSV File",
+              multiple = TRUE,
+              accept = c("text/csv",
+                         "text/comma-separated-values,text/plain", ".csv")
             ),
-            mainPanel = mainPanel(
-              DT::dataTableOutput(outputId = "contents"),
-              verbatimTextOutput(outputId = "summary")
+            actionButton('reset', 'Reset Input'),
+            # Input: Checkbox if file has header
+            checkboxInput(
+              inputId = "header",
+              label = "File has Header",
+              value = TRUE
+            ),
+            # Input: Select separator
+            radioButtons(
+              inputId = "sep",
+              label = "Separator",
+              choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
+              selected = ","
+            ),
+            # Input: Select quotes
+            radioButtons(
+              inputId = "quote",
+              label = "Quote",
+              choices = c(None = "", "Double Quote" = '"', 
+                          "Single Quote" = "'"),
+              selected = '"'
+            ),
+            # Horizontal line
+            hr(),
+            # Example Datasets
+            selectInput(
+              inputId = "ex_data_csv",
+              label = "Choose Example Data:",
+              choices = c("None", "Fisher NY")
+            ),
+            # Input: Select EPSG Code
+            selectInput(
+              inputId = "epsg_csv",
+              label = "Assign EPSG Code:",
+              choices = sort(na.omit(epsg_data$code)),
+              selected = 4326
+            ),
+            hr(),
+            #Input: Select data table or summary of data set
+            radioButtons(
+              inputId = "display",
+              label = "Display",
+              choices = c("Data Frame", "Column Summary"),
+              selected = "Data Frame"
             )
+          ),
+          mainPanel = mainPanel(
+            DT::dataTableOutput(outputId = "contents"),
+            verbatimTextOutput(outputId = "summary")
           )
         )
-        
       ),
 
 # Upload Map Tab ----------------------------------------------------------
 
-      tabItem(tabName = "map",
-              fluidPage(
-                  # Sidebar layout with input and output definitions
-                  sidebarLayout(
-                    sidebarPanel = sidebarPanel(
-                      width = 3,
-                      # Input: Select a file
-                      fileInput(
-                        inputId = "dataset_env",
-                        label = "Choose TIF File",
-                        multiple = TRUE
-                      ),
-                      # Action button to reset input
-                      actionButton('reset_env', 'Reset Input'),
-                      # Horizontal line
-                      hr(),
-                      # Example data set
-                      uiOutput(outputId = "ex_data_env"),
-                      # EPSG Code TIF
-                      uiOutput(outputId = "epsg_env")
-                    ),
-                    mainPanel = mainPanel(
-                      # Headline
-                      h4(textOutput(outputId = "epsg_head")),
-                      # Sub headline (instructions)
-                      h5(textOutput(outputId = "epsg_sub_head")),
-                      br(),
-                      DT::dataTableOutput(outputId = "contents_env")
-                    )
-                  )
-              )),
+      tabItem(
+        tabName = "map",
+        # Sidebar layout with input and output definitions
+        sidebarLayout(
+          sidebarPanel = sidebarPanel(
+            width = 3,
+            # Input: Select a file
+            fileInput(
+              inputId = "dataset_env",
+              label = "Choose TIF File",
+              multiple = TRUE
+            ),
+            # Action button to reset input
+            actionButton('reset_env', 'Reset Input'),
+            # Horizontal line
+            hr(),
+            # Example data set
+            uiOutput(outputId = "ex_data_env"),
+            # EPSG Code TIF
+            uiOutput(outputId = "epsg_env")
+          ),
+          mainPanel = mainPanel(
+            # Headline
+            h4(textOutput(outputId = "epsg_head")),
+            # Sub headline (instructions)
+            h5(textOutput(outputId = "epsg_sub_head")),
+            br(),
+            DT::dataTableOutput(outputId = "contents_env")
+          )
+        )
+      ),
 
 # Track Creation Tab ------------------------------------------------------
-tabItem(tabName = "track",
-  fluidRow(
-    # Create a track
-    column(width = 4,
-           h4(textOutput(outputId = "track_head")),
-           uiOutput(outputId = "x"),
-           uiOutput(outputId = "y"),
-           uiOutput(outputId = "ts")
-    ),
-    # Transform EPSG Codes of CSV and TIF and select ID(s)
-    column(width = 4,
-           br(),
-           br(),
-           uiOutput(outputId = "epsg_trk"),
-           uiOutput(outputId = "id"),
-           uiOutput(outputId = "id_trk")
-    ),
-    # Resample track
-    column(width = 4,
-           h4(textOutput(outputId = "resamp_head")),
-           uiOutput(outputId = "rate_min"),
-           uiOutput(outputId = "tol_min"),
-           uiOutput(
-             outputId = 'fetch_dr'
-           )
-    )
-  ),
-  br(),
-  fluidRow(
-    # Change color of tab titles from blue to green
-    tags$style(type = "text/css", "li a{color: #15AE57;}"),
-    column(width = 12,
-      # Tabs within fluid row
-      tabsetPanel(
-        tabPanel(
-          title = "Track",
-          # Input: Select data table or summary of track
-          column(width = 1,
-                 br(),
-                 br(),
-                 uiOutput(outputId = "display_trk")
+      tabItem(
+        tabName = "track",
+        fluidRow(
+          # Create a track
+          column(
+            width = 4,
+            h4(textOutput(outputId = "track_head")),
+            uiOutput(outputId = "x"),
+            uiOutput(outputId = "y"),
+            uiOutput(outputId = "ts")
           ),
-          # Data table or summary
-          column(width = 11,
-                 DT::dataTableOutput(outputId = "contents_trk"),
-                 verbatimTextOutput(outputId = "summary_trk")
+          # Transform EPSG Codes of CSV and TIF and select ID(s)
+          column(
+            width = 4,
+            br(),
+            br(),
+            uiOutput(outputId = "epsg_trk"),
+            uiOutput(outputId = "id"),
+            uiOutput(outputId = "id_trk")
+          ),
+          # Resample track
+          column(
+            width = 4,
+            h4(textOutput(outputId = "resamp_head")),
+            uiOutput(outputId = "rate_min"),
+            uiOutput(outputId = "tol_min"),
+            uiOutput(outputId = 'fetch_dr')
           )
         ),
-        tabPanel(
-          title = "Summary of Sampling Rate",
-          # Data table: summary of sampling rate
-          column(width = 12,
-                 h4(textOutput(outputId = "samp_rate_head")),
-                 DT::dataTableOutput(outputId = "summary_samp_rate")
+        br(),
+        fluidRow(
+          # Change color of tab titles from blue to green
+          tags$style(type = "text/css", "li a{color: #15AE57;}"),
+          column(
+            width = 12,
+            # Tabs within fluid row
+            tabsetPanel(
+              tabPanel(
+                title = "Track",
+                # Input: Select data table or summary of track
+                column(
+                  width = 1,
+                  br(),
+                  br(),
+                  uiOutput(outputId = "display_trk")
+                ),
+                # Data table or summary
+                column(
+                  width = 11,
+                  DT::dataTableOutput(outputId = "contents_trk"),
+                  verbatimTextOutput(outputId = "summary_trk")
+                )
+              ),
+              tabPanel(
+                title = "Summary of Sampling Rate",
+                # Data table: summary of sampling rate
+                column(
+                  width = 12,
+                  h4(textOutput(outputId = "samp_rate_head")),
+                  DT::dataTableOutput(outputId = "summary_samp_rate")
+                )
+              )
+            )
           )
         )
-      )
-    )
-  )
-),
+      ),
 
 # Add Additional Covariates Tab -------------------------------------------
-tabItem(tabName = "covariates",
+      tabItem(
+        tabName = "covariates",
         fluidRow(  
-          column(width = 5,
-                 # Headline
-                 h4(textOutput(outputId = "min_burst_head")),
-                 br(),
-                 # Only retain bursts with a minimum number of relocations
-                 uiOutput(outputId = "min_burst"),
-                 br(),
-                 # Headline
-                 h4(textOutput(outputId = "bursts_head")),
-                 # No. of bursts and observations remaining given minimum no.
-                 # of relocations per burst
-                 DT::dataTableOutput(outputId = "contents_bursts")
+          column(
+            width = 5,
+            # Headline
+            h4(textOutput(outputId = "min_burst_head")),
+            br(),
+            # Only retain bursts with a minimum number of relocations
+            uiOutput(outputId = "min_burst"),
+            br(),
+            # Headline
+            h4(textOutput(outputId = "bursts_head")),
+            # No. of bursts and observations remaining given minimum no.
+            # of relocations per burst
+            DT::dataTableOutput(outputId = "contents_bursts")
           ),
-          column(width = 6, offset = 1,
-                 # Headline
-                 h4(textOutput(outputId = "env_info_head")),
-                 # Sub headline (instructions)
-                 h5(textOutput(outputId = "env_info_sub_head")),
-                 # Environmental covariates data frame
-                 rHandsontableOutput(outputId = "env_df"),
-                 br(),
-                 # Headline
-                 h4(textOutput(outputId = "tod_head")),
-                 # Sub headline (instructions)
-                 h5(textOutput(outputId = "tod_sub_head")),
-                 # Time of day
-                 uiOutput(outputId = "tod"),
-                 # Data frame Time of Day levels 
-                 DT::dataTableOutput(outputId = "contents_tod")
+          column(
+            width = 6, offset = 1,
+            # Headline
+            h4(textOutput(outputId = "env_info_head")),
+            # Sub headline (instructions)
+            h5(textOutput(outputId = "env_info_sub_head")),
+            # Environmental covariates data frame
+            rHandsontableOutput(outputId = "env_df"),
+            br(),
+            # Headline
+            h4(textOutput(outputId = "tod_head")),
+            # Sub headline (instructions)
+            h5(textOutput(outputId = "tod_sub_head")),
+            # Time of day
+            uiOutput(outputId = "tod"),
+            # Data frame Time of Day levels 
+            DT::dataTableOutput(outputId = "contents_tod")
           )
         )
-),
+      ),
 
 # Visualize Tab -----------------------------------------------------------
 
-tabItem(tabName = "plot",
-        h2("Under Maintenance")),
+      tabItem(tabName = "plot",
+        h2("Under Maintenance")
+      ),
 
 # Modeling Tab ------------------------------------------------------------
 
-tabItem(tabName = "model",
-  # Enable to clear all inputs of modeling tab by "clear model" button
-  shinyjs::useShinyjs(),
-  div(id = "modeling_tab",
-  fluidRow(
-    column(width = 4,
-           # Headline
-           h4(textOutput(outputId = "modeling_head")),
-           # Choose a model
-           uiOutput(outputId = "model")
-    ),
-    column(
-      width = 3,
-      br(),
-      br(),
-      # Set number of random steps per relocation (ISSF)
-      uiOutput(outputId = "rand_stps"),
-      # Set number of random points (RSF)
-      uiOutput(outputId = "rand_points")
-    )
-  ),
-  fluidRow(
-    column(width = 4,
-           br(),
-           uiOutput(outputId = "mod_var")
-    ),
-    column(
-      width = 3,
-      br(),
-      # Select no. of interaction terms to add
-      uiOutput(outputId = "inter_no")
-    )
-  ),
-  fluidRow(
-    column(width = 2,
-           # Select 1st interaction
-           uiOutput(outputId = "inter_1")
-    ),
-    column(width = 2,
-           # Select 2nd interaction
-           uiOutput(outputId = "inter_2")
-    ),
-    column(width = 2,
-           # Select 3rd interaction
-           uiOutput(outputId = "inter_3")
-    ),
-    column(width = 2,
-           # Select 4th interaction
-           uiOutput(outputId = "inter_4")
-    ),
-    column(width = 2,
-           # Select 5th interaction
-           uiOutput(outputId = "inter_5")
-    )
-  )
-  ), # End of clear inputs
-  fluidRow(
-    column(
-      width = 12,
-      # Clear button
-      actionButton("clear_button", "Clear", icon = icon("times-circle")),
-      # Fit model button
-      actionButton("fit_button", "Fit Model", icon = icon("poll")),
-      # Download button for model estimates
-      downloadButton("downloadData", "Download estimates"),
-      # Download button for user reports
-      downloadButton("report", "Download report")
-    )
-  ),
-  fluidRow(
-    column(width = 5,
-        br(),
-        DT::dataTableOutput(outputId = "contents_mod")
-    )
-  )
-)
+      tabItem(
+        tabName = "model",
+        # Enable to clear all inputs of modeling tab by "clear model" button
+        shinyjs::useShinyjs(),
+        div(id = "modeling_tab",
+        fluidRow(
+          column(
+            width = 4,
+            # Headline
+            h4(textOutput(outputId = "modeling_head")),
+            # Choose a model
+            uiOutput(outputId = "model")
+          ),
+          column(
+            width = 3,
+            br(),
+            br(),
+            # Set number of random steps per relocation (ISSF)
+            uiOutput(outputId = "rand_stps"),
+            # Set number of random points (RSF)
+            uiOutput(outputId = "rand_points")
+          )
+        ),
+        fluidRow(
+          column(
+            width = 4,
+            br(),
+            uiOutput(outputId = "mod_var")
+          ),
+          column(
+            width = 3,
+            br(),
+            # Select no. of interaction terms to add
+            uiOutput(outputId = "inter_no")
+          )
+        ),
+        fluidRow(
+          column(
+            width = 2,
+            # Select 1st interaction
+            uiOutput(outputId = "inter_1")
+          ),
+          column(
+            width = 2,
+            # Select 2nd interaction
+            uiOutput(outputId = "inter_2")
+          ),
+          column(
+            width = 2,
+            # Select 3rd interaction
+            uiOutput(outputId = "inter_3")
+          ),
+          column(
+            width = 2,
+            # Select 4th interaction
+            uiOutput(outputId = "inter_4")
+          ),
+          column(
+            width = 2,
+            # Select 5th interaction
+            uiOutput(outputId = "inter_5")
+          )
+        )
+        ), # End of clear inputs
+        fluidRow(
+          column(
+            width = 12,
+            # Clear button
+            actionButton("clear_button", "Clear", icon = icon("times-circle")),
+            # Fit model button
+            actionButton("fit_button", "Fit Model", icon = icon("poll")),
+            # Download button for model estimates
+            downloadButton("downloadData", "Download estimates"),
+            # Download button for user reports
+            downloadButton("report", "Download report")
+          )
+        ),
+        fluidRow(
+          column(
+            width = 5,
+            br(),
+            DT::dataTableOutput(outputId = "contents_mod")
+          )
+        )
+      )
 
 # End tabItems (insert a new tabItem above)
 )
