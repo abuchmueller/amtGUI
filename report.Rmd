@@ -44,26 +44,38 @@ params$dataset
 params$dataset_env
 ```
 
-##### EPSG Code detected in csv
+##### EPSG code detected in csv
 ```{r echo=FALSE}
 params$epsg_csv
 ```
 
-##### EPSG detected in map
+##### EPSG code detected in map
 ```{r echo=FALSE}
 params$epsg_env
 ```
 
-##### EPSG used in track creation
+##### EPSG code used in track creation
 ```{r echo=FALSE}
 params$epsg_trk
 ```
 
-##### User input for x, y coordinates, timestamp and ID columns
+##### User input for x-coordinates (longitude)
 ```{r echo=FALSE}
 params$x
+```
+
+##### User input for y-coordinates (latitude)
+```{r echo=FALSE}
 params$y
+```
+
+##### User input for timestamp column
+```{r echo=FALSE}
 params$ts
+```
+
+##### User input for ID columb
+```{r echo=FALSE}
 params$id
 ```
 
