@@ -332,8 +332,6 @@ tabItem(tabName = "model",
       # Download button for user reports
       downloadButton("report", "Download report")
     )
-      )
-    )
   ),
   fluidRow(
     column(width = 5,
@@ -343,6 +341,10 @@ tabItem(tabName = "model",
   )
 )
 
+# End tabItems (insert a new tabItem above)
+)
+# End dashboardBody
+)
 # End UI
 )
 
