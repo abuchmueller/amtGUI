@@ -24,6 +24,7 @@ params:
   inter_4: NA
   inter_5: NA 
   rand_stps: NA
+  rand_points: NA
   min_burst: NA 
   tod: NA
   
@@ -44,12 +45,12 @@ params$dataset
 params$dataset_env
 ```
 
-##### EPSG code detected in csv
+##### EPSG code assigned in csv
 ```{r echo=FALSE}
 params$epsg_csv
 ```
 
-##### EPSG code detected in map
+##### EPSG code assigned in map
 ```{r echo=FALSE}
 params$epsg_env
 ```
@@ -84,11 +85,6 @@ params$id
 params$id_trk
 ```
 
-##### Choosen date range 
-```{r echo=FALSE}
-params$date_range
-```
-
 ##### Resampling rate
 ```{r echo=FALSE}
 params$resamp_rate
@@ -99,9 +95,34 @@ params$resamp_rate
 params$tolerance
 ```
 
+##### Choosen date range 
+```{r echo=FALSE}
+params$date_range
+```
+
+##### Number of bursts set
+```{r echo=FALSE}
+params$min_burst
+```
+
+##### Time of day included?
+```{r echo=FALSE}
+params$tod
+```
+
 ##### Model type 
 ```{r echo=FALSE}
 params$model
+```
+
+##### Number of random steps used (iSSF)
+```{r echo=FALSE}
+params$rand_stps
+```
+
+##### Number of random points used (RSF)
+```{r echo=FALSE}
+params$rand_points
 ```
 
 ##### Model covariates
@@ -122,21 +143,3 @@ params$inter_3
 params$inter_4
 params$inter_5
 ```
-
-##### Number of random steps used
-```{r echo=FALSE}
-params$rand_stps
-```
-
-##### Number of bursts set
-```{r echo=FALSE}
-params$min_burst
-```
-
-##### Time of day included
-```{r echo=FALSE}
-params$tod
-```
-
-
-
