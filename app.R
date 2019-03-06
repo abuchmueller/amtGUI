@@ -1164,7 +1164,7 @@ bursts_df <- reactive({
           Alternatively you may choose a different resampling rate, i.e., 
           adjust the interval (in min) to retain the current no. of minimum 
           relocations per burst."),
-        type = "warning",
+        type = "error",
         duration = 45 #NULL
         )
       # Return data frame
@@ -1196,7 +1196,7 @@ bursts_df <- reactive({
           a lower one. Alternatively you may choose a different resampling rate,
           i.e., adjust the interval (in min) to retain the current no. of 
           minimum relocations per burst."),
-        type = "warning",
+        type = "error",
         duration = 45 #NULL
       )
       # Return data frame
@@ -1297,7 +1297,7 @@ tod_df <- reactive({
           affected ID(s). Alternatively, you may adjust the restrictions on 
           bursts, or resample the track differently."),
         type = "warning",
-        duration = 45
+        duration = NULL #45
         )
       # Return data frame sorted by no. of levels
       unique_tod %>% dplyr::arrange(levels) %>% 
@@ -1332,8 +1332,8 @@ tod_df <- reactive({
           interactions with time of day to the model. Alternatively, you may 
           adjust the restrictions on bursts, or resample the track 
           differently."),
-        type = "warning",
-        duration = 45
+        type = "error",
+        duration = NULL #45
         )
       # Return data frame
       unique_tod %>% select(ID = id, "Time of Day" = tod, "Levels" = levels)
@@ -1365,8 +1365,8 @@ tod_df <- reactive({
           add interactions with time of day to the model. Alternatively, you may 
           adjust the restrictions on bursts, or resample the track 
           differently."),
-        type = "warning",
-        duration = 45
+        type = "error",
+        duration = NULL #45
         )
       # Return data frame
       unique_tod %>% select("Time of Day" = tod, "Levels" = levels)
