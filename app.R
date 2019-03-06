@@ -109,8 +109,8 @@ ui <- dashboardPage(skin = "green",
             selectInput(
               inputId = "epsg_csv",
               label = "Assign EPSG Code:",
-              choices = sort(na.omit(epsg_data$code)),
-              selected = 4326
+              choices = c('', sort(na.omit(epsg_data$code))),
+              selected = ''#4326
             ),
             hr(),
             #Input: Select data table or summary of data set
@@ -480,7 +480,8 @@ observeEvent(input$reset_env, {
 # Environmental data input e.g. TIF-File
 envInput <- reactive({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(input$epsg_csv, '')
   )
   # Example data selectInput needs to be loaded (not null)
   if (!is.null(input$ex_data_env)) {
@@ -535,7 +536,8 @@ env <- reactive({
 # Input: Upload example data
 output$ex_data_env <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(input$epsg_csv, '')
   )
   selectInput(
     inputId = "ex_data_env",
@@ -557,23 +559,26 @@ epsg_env_detected <- reactive({
 # Input: EPSG Code TIF
 output$epsg_env <- renderUI({
   validate(
-    need(csvInput(), '')
+    need(csvInput(), ''),
+    need(input$epsg_csv, '')
   )
   selectInput(
     inputId = "epsg_env",
     label = "Assign EPSG Code:", 
-    choices = sort(na.omit(epsg_data$code)),
-    selected = ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
-                      # Multiple matches possible select 1st one by default
-                      yes = epsg_env_detected()[1, "EPSG Code(s)"],
-                      no = input$epsg_csv
-                      )
+    choices = c('', sort(na.omit(epsg_data$code))),
+    selected = ''
+      # ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
+      #                 # Multiple matches possible select 1st one by default
+      #                 yes = epsg_env_detected()[1, "EPSG Code(s)"],
+      #                 no = input$epsg_csv
+      #                 )
 )
 })
 # Show headline for EPSG Code table
 output$epsg_head <- renderText({
   validate(
-    need(csvInput(), 'Please upload track data first.')
+    need(csvInput(), 'Please upload track data first.'),
+    need(input$epsg_csv, 'Please assign an EPSG code to the track data first.')
   )
   if (!is.null(epsg_env_detected())) {
     "Found EPSG Code(s) for Uploaded File(s)"
@@ -591,7 +596,7 @@ output$epsg_sub_head <- renderText({
 # Data frame of detected EPSG codes
 output$contents_env <- DT::renderDataTable({
   validate(
-    need(env(), 'Please upload a map with environmental covariates.'),
+    need(env(), 'Please upload a map of environmental covariates.'),
     need(epsg_env_detected(), 'No EPSG code detected for uploaded file.')
   )
   DT::datatable(epsg_env_detected(),
@@ -611,8 +616,11 @@ output$contents_env <- DT::renderDataTable({
 # Update variable selection based on uploaded data set
 # Show headline for track menu in sidebar
 output$track_head <- renderText({
-  if (!is.null(csvInput()) && !is.null(envInput())) {
+  if (!is.null(csvInput()) && !is.null(envInput()) && input$epsg_env != '') {
     "Select Track Variables"
+  } else if (!is.null(csvInput()) && !is.null(envInput()) &&
+             input$epsg_env == '') {
+    "Please assign an EPSG code to the map of environmental covariates first."
   } else {
     "Please upload track data and map first."
   }
@@ -621,7 +629,8 @@ output$track_head <- renderText({
 output$x <- renderUI({
   validate(
     need(csvInput(), ''),
-    need(envInput(), '')
+    need(envInput(), ''),
+    need(input$epsg_env, '')
   )
   selectizeInput(
     inputId = 'x', 
@@ -637,7 +646,8 @@ output$x <- renderUI({
 output$y <- renderUI({
   validate(
     need(csvInput(), ''),
-    need(envInput(), '')
+    need(envInput(), ''),
+    need(input$epsg_env, '')
   )
   selectizeInput(
     inputId = 'y', 
@@ -653,7 +663,8 @@ output$y <- renderUI({
 output$ts <- renderUI({
   validate(
     need(csvInput(), ''),
-    need(envInput(), '')
+    need(envInput(), ''),
+    need(input$epsg_env, '')
   )
   selectizeInput(
     inputId = 'ts', 
@@ -669,7 +680,8 @@ output$ts <- renderUI({
 output$epsg_trk <- renderUI({
   validate(
     need(csvInput(), ''),
-    need(envInput(), '')
+    need(envInput(), ''),
+    need(input$epsg_env, '')
   )
   selectInput(
     inputId = "epsg_trk",
@@ -786,7 +798,8 @@ output$fetch_dr <- renderUI({
 })
 # Display data frame or column summary of track 
 output$display_trk <- renderUI({
-  if (!is.null(csvInput()) && !is.null(envInput())) {
+  if (!is.null(csvInput()) && !is.null(envInput()) &&
+      input$epsg_env != '') {
     radioButtons(
       inputId = "display_trk",
       label = "Display",
