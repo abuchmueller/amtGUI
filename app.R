@@ -1,7 +1,6 @@
 library(shiny)
 library(shinydashboard)
-library(ggplot2)
-#library(tidyverse)
+#library(ggplot2)
 library(amt)
 library(rhandsontable)
 
@@ -276,7 +275,8 @@ ui <- dashboardPage(skin = "green",
 
 # Visualize Tab -----------------------------------------------------------
 
-      tabItem(tabName = "plot",
+      tabItem(
+        tabName = "plot",
         h2("Under Maintenance")
       ),
 
@@ -591,7 +591,7 @@ output$epsg_sub_head <- renderText({
 # Data frame of detected EPSG codes
 output$contents_env <- DT::renderDataTable({
   validate(
-    need(env(), 'Please upload an environmental data file.'),
+    need(env(), 'Please upload a map with environmental covariates.'),
     need(epsg_env_detected(), 'No EPSG code detected for uploaded file.')
   )
   DT::datatable(epsg_env_detected(),
@@ -768,8 +768,10 @@ output$fetch_dr <- renderUI({
     min.date <- min(dat_excl_id()$ts)
     max.date <- max(dat_excl_id()$ts)
   } else {
-    min.date <- min(dat()$ts)
-    max.date <- max(dat()$ts)
+    # Subset of "dat" data frame by selected IDs
+    dat_id <- dat() %>% filter(id %in% input$id_trk)
+    min.date <- min(dat_id$ts) #min(dat()$ts)
+    max.date <- max(dat_id$ts) #max(dat()$ts)
   }
   dateRangeInput(inputId = "daterange",
                  label = "Choose a Date Range:",
@@ -801,9 +803,9 @@ dat <- reactive({
     need(input$ts, ''),
     need(input$id, '')
   )
-  csvInput() %>% 
-  select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
-  na.omit()
+  csvInput() %>%
+    select(x = input$x, y = input$y, ts = input$ts, id = input$id) %>%  
+    na.omit()
 })
 # Create a track: select relevant columns and omit NAs (excluding ID)
 dat_excl_id <- reactive({
@@ -883,7 +885,7 @@ trk <- reactive({
     # Assign known EPSG Code to track data
     track_one <- make_track(dat_df,
                             x, y, ts, id = id,
-                        crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
+                            crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
     )
     # Transform CRS of track
     if (input$epsg_csv == input$epsg_trk) {
@@ -1412,7 +1414,7 @@ output$env_info_sub_head <- renderText({
     need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
            (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
   )
-  "Change names of covariates and convert to categorical or continuous variable."
+  "Edit names of covariates and convert to categorical or continuous."
 })
 # Create initial data frame with environmental covariates
 env_info <- reactive({
