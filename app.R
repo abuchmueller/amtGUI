@@ -2071,7 +2071,9 @@ output$report <- downloadHandler(
                    rand_stps = input$rand_stps,
                    min_burst = input$min_burst,
                    tod = input$tod,
-                   rand_points = input$rand_points
+                   rand_points = input$rand_points,
+                   env_cov = env_info()$Covariate,
+                   env_cat = env_info()$Categorical
     )
     
     # Knit the document, passing in the `params` list, and eval it in a

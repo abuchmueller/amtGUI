@@ -12,10 +12,16 @@ params:
   ts: NA
   id: NA
   id_trk: NA 
-  date_range: NA
   resamp_rate: NA
   tolerance: NA
-  model: NA 
+  date_range: NA
+  min_burst: NA
+  env_cov: NA
+  env_cat: NA
+  tod: NA
+  model: NA
+  rand_stps: NA
+  rand_points: NA
   mod_var: NA
   inter_no: NA
   inter_1: NA
@@ -23,10 +29,7 @@ params:
   inter_3: NA
   inter_4: NA
   inter_5: NA 
-  rand_stps: NA
-  rand_points: NA
-  min_burst: NA 
-  tod: NA
+
   
 ---
 <br>
@@ -105,6 +108,12 @@ params$date_range
 params$min_burst
 ```
 
+##### Environmental covariates converted into categorical?
+```{r echo=FALSE}
+params$env_cov
+params$env_cat
+```
+
 ##### Time of day included?
 ```{r echo=FALSE}
 params$tod
@@ -143,3 +152,4 @@ params$inter_3
 params$inter_4
 params$inter_5
 ```
+
