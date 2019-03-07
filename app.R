@@ -110,7 +110,7 @@ ui <- dashboardPage(skin = "green",
               inputId = "epsg_csv",
               label = "Assign EPSG Code:",
               choices = c('', sort(na.omit(epsg_data$code))),
-              selected = ''#4326
+              selected = 4326 #''
             ),
             hr(),
             #Input: Select data table or summary of data set
@@ -354,9 +354,9 @@ ui <- dashboardPage(skin = "green",
             # Fit model button
             actionButton("fit_button", "Fit Model", icon = icon("poll")),
             # Download button for model estimates
-            downloadButton("downloadData", "Download estimates"),
+            downloadButton("downloadData", "Download Estimates"),
             # Download button for user reports
-            downloadButton("report", "Download report")
+            downloadButton("report", "Download Report")
           )
         ),
         fluidRow(
@@ -566,7 +566,7 @@ output$epsg_env <- renderUI({
     inputId = "epsg_env",
     label = "Assign EPSG Code:", 
     choices = c('', sort(na.omit(epsg_data$code))),
-    selected = ''
+    selected = 5071 #''
       # ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
       #                 # Multiple matches possible select 1st one by default
       #                 yes = epsg_env_detected()[1, "EPSG Code(s)"],
@@ -1102,6 +1102,8 @@ output$min_burst <- renderUI({
 # Show headline for bursts data frame
 output$bursts_head <- renderText({
   validate(
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
     need(input$min_burst, '')
   )
   "No. of Bursts Remaining"
@@ -1109,6 +1111,8 @@ output$bursts_head <- renderText({
 # Table: No. of bursts remaining (given minimum no. of relocations per burst)
 bursts_df <- reactive({
   validate(
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
     need(input$min_burst, '')
   )
   # Multiple IDs selected
@@ -1262,8 +1266,8 @@ output$tod <- renderUI({
     inputId = "tod",
     label = "Time of Day:",
     choices = c('',
-                "excl. dawn and dusk" = FALSE, 
-                "incl. dawn and dusk" = TRUE),
+                "Excl. dawn and dusk" = FALSE, 
+                "Incl. dawn and dusk" = TRUE),
     selected = ''
   )
 })
@@ -1463,13 +1467,17 @@ output$env_df = renderRHandsontable({
 # Show headline for EPSG Code table
 output$modeling_head <- renderText({
   validate(
-    need(input$min_burst, 'Please create a track first.')
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(input$min_burst, 'Please create a track and add covariates first.')
   )
   "Conditional Logit Model"
 })
 # Choose a model
 output$model <- renderUI({
   validate(
+    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
+           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
     need(input$min_burst, '')
   )
   selectInput(
@@ -1965,6 +1973,7 @@ observeEvent(input$clear_button, {
 mod <- reactive({
   validate(
     need(input$model, 'Please choose a model.'),
+    need(mod_pre(), ''),
     need(values_model$model_state == 'fit', '')
   )
   # Show progress indicator to user
