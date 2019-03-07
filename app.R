@@ -2098,7 +2098,10 @@ output$report <- downloadHandler(
                    inter_5 = input$inter_5,
                    rand_stps = input$rand_stps,
                    min_burst = input$min_burst,
-                   tod = input$tod,
+                   tod = ifelse(
+                     input$tod == '',  yes = '', no = ifelse(
+                     input$tod, 'Incl. dawn and dusk', 'Excl. dawn and dusk'
+                   )),
                    rand_points = input$rand_points,
                    env_cov = env_info()$Covariate,
                    env_cat = env_info()$Categorical
