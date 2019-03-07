@@ -40,12 +40,12 @@ You can save this file and reproduce your previous analysis using the input valu
 
 ##### Uploaded dataset
 ```{r csv Input, echo=FALSE}
-params$dataset
+params$dataset[-4]
 ```
 
 ##### Uploaded environmental data
 ```{r environment, echo=FALSE}
-params$dataset_env
+params$dataset_env[-4]
 ```
 
 ##### EPSG code assigned in csv
@@ -147,7 +147,7 @@ params$inter_no
 ##### Interaction terms used (if any)
 ```{r echo=FALSE}
 if (is.null(params$inter_1) == TRUE) {
-  return("None set")
+  return("None used")
 } else {
   params$inter_1
   params$inter_2
