@@ -3,6 +3,7 @@ library(shinydashboard)
 #library(ggplot2)
 library(amt)
 library(rhandsontable)
+library(leaflet)
 
 
 # Example data
@@ -51,7 +52,7 @@ ui <- dashboardPage(skin = "green",
       menuSubItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
       menuSubItem("Add Covariates", tabName = "covariates", icon = icon("plus-square"))),
       menuItem("Modeling", tabName = "model", icon = icon("table")),
-      menuItem("Visualize", tabName = "plot", icon = icon("chart-area"))
+      menuItem("Interactive Map", tabName = "plot", icon = icon("globe-americas"))
     )),
 
 # Body ----------------------------------------------------------
