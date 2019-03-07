@@ -144,12 +144,16 @@ params$mod_var
 params$inter_no
 ```
 
-##### Interaction terms used
+##### Interaction terms used (if any)
 ```{r echo=FALSE}
-params$inter_1
-params$inter_2
-params$inter_3
-params$inter_4
-params$inter_5
+if (is.null(params$inter_1) == TRUE) {
+  return("None set")
+} else {
+  params$inter_1
+  params$inter_2
+  params$inter_3
+  params$inter_4
+  params$inter_5 
+}
 ```
 
