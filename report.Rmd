@@ -108,11 +108,16 @@ params$date_range
 params$min_burst
 ```
 
-##### Environmental covariates converted into categorical?
+##### Environmental covariates
 ```{r echo=FALSE}
 params$env_cov
+```
+
+##### Transformed into categorical?
+```{r}
 params$env_cat
 ```
+
 
 ##### Time of day included?
 ```{r echo=FALSE}
