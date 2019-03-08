@@ -1311,12 +1311,12 @@ tod_df <- reactive({
       showNotification(
         ui = paste0(
           "Interaction terms can be applied only to factors with 2 or more 
-          levels. However, only one factor level remain for the ID(s): ",
+          levels. However, only one factor level remains for the ID(s): ",
           paste0(remove_ids, collapse = ", "), ". Therefore, you cannot add
           interactions with time of day to the model if you decide to keep the 
           affected ID(s). Alternatively, you may adjust the restrictions on 
           bursts, or resample the track differently."),
-        type = "warning",
+        type = "error",
         duration = NULL #45
         )
       # Return data frame sorted by no. of levels
@@ -1745,7 +1745,7 @@ mod_pre <- reactive({
         for (j in 1:nrow(t_res)) {
           for (i in 1:length(names(env()))) {
             # Convert to factor
-            if (env_info()$Categorical[i] && 
+            if (env_info()$Categorical[i] &&
                 is.numeric(
                   t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
               # Step start (_start)
@@ -1758,7 +1758,7 @@ mod_pre <- reactive({
                 paste0(names(env())[i], "_end")]] <- as.factor(
                   t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
                 )
-            } else if (!env_info()$Categorical[i] && 
+            } else if (!env_info()$Categorical[i] &&
                        is.factor(t_res$steps[[j]][[
                          paste0(names(env())[i], "_end")]])) {
               # Convert to numeric
