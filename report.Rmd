@@ -48,12 +48,12 @@ params$dataset[-4]
 params$dataset_env[-4]
 ```
 
-##### EPSG code assigned in csv
+##### EPSG code assigned to csv
 ```{r echo=FALSE}
 params$epsg_csv
 ```
 
-##### EPSG code assigned in map
+##### EPSG code assigned to map
 ```{r echo=FALSE}
 params$epsg_env
 ```
@@ -63,27 +63,27 @@ params$epsg_env
 params$epsg_trk
 ```
 
-##### User input for x-coordinates (longitude)
+##### Selected input for x-coordinates (longitude)
 ```{r echo=FALSE}
 params$x
 ```
 
-##### User input for y-coordinates (latitude)
+##### Selected input for y-coordinates (latitude)
 ```{r echo=FALSE}
 params$y
 ```
 
-##### User input for timestamp column
+##### Selected input for timestamp
 ```{r echo=FALSE}
 params$ts
 ```
 
-##### User input for ID columb
+##### Selected input for ID
 ```{r echo=FALSE}
 params$id
 ```
 
-##### User selected ID's for track creation
+##### Selected ID's for track creation
 ```{r echo=FALSE}
 params$id_trk
 ```
@@ -98,7 +98,7 @@ params$resamp_rate
 params$tolerance
 ```
 
-##### Choosen date range 
+##### Chosen date range 
 ```{r echo=FALSE}
 params$date_range
 ```
@@ -146,7 +146,7 @@ params$inter_no
 
 ##### Interaction terms used (if any)
 ```{r echo=FALSE}
-if (is.null(params$inter_1) == TRUE) {
+if (is.null(params$inter_1)) {
   return("None used")
 } else {
   params$inter_1
