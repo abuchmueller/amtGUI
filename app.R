@@ -1,6 +1,5 @@
 library(shiny)
 library(shinydashboard)
-#library(ggplot2)
 library(amt)
 library(rhandsontable)
 library(leaflet)
@@ -1958,6 +1957,12 @@ mod_all_var <- reactive({
   paste0(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5)
 })
 
+# Fit button (to start model fitting)
+fit <- eventReactive(input$fit_button, {
+  # Run model fitting part below
+  mod()
+})
+
 # Clear model button (works for inputs only)
 observeEvent(input$clear_button, {
   shinyjs::reset("modeling_tab")
@@ -1977,8 +1982,7 @@ observeEvent(input$clear_button, {
 mod <- reactive({
   validate(
     need(input$model, 'Please choose a model.'),
-    need(mod_pre(), ''),
-    need(values_model$model_state == 'fit', '')
+    need(mod_pre(), '')
   )
   # Show progress indicator to user
   withProgress(message = 'Fitting model', value = 0.5, {
@@ -2044,12 +2048,12 @@ mod <- reactive({
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
   validate(
-    need(mod(), '')
+    need(values_model$model_state != 'clear', '')
   )
   # Dependent on fit button above
   DT::datatable(
     # Round numeric columns
-    mod() %>% dplyr::mutate_if(is.numeric, round, 4),
+    fit() %>% dplyr::mutate_if(is.numeric, round, 4),
     rownames = FALSE,
     options = list(searching = FALSE, paging = FALSE))
 })
