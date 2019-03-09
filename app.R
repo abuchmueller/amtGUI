@@ -80,11 +80,12 @@ ui <- dashboardPage(skin = "green",
               choices = c("None", "Fisher NY")
             ),
             # Input: Select EPSG Code
-            selectInput(
+            selectizeInput(
               inputId = "epsg_csv",
               label = "Assign EPSG Code:",
               choices = c('', sort(na.omit(epsg_data$code))),
-              selected = 4326 #''
+              selected = 4326, #''
+              options = list(maxOptions = 10000)
             )
           ),
           column(
@@ -719,11 +720,12 @@ output$epsg_env <- renderUI({
     need(csvInput(), ''),
     need(input$epsg_csv, '')
   )
-  selectInput(
+  selectizeInput(
     inputId = "epsg_env",
     label = "Assign EPSG Code:", 
     choices = c('', sort(na.omit(epsg_data$code))),
-    selected = 5071 #''
+    selected = 5071, #''
+    options = list(maxOptions = 10000)
       # ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
       #                 # Multiple matches possible select 1st one by default
       #                 yes = epsg_env_detected()[1, "EPSG Code(s)"],
@@ -841,11 +843,12 @@ output$epsg_trk <- renderUI({
     need(envInput(), ''),
     need(input$epsg_env, '')
   )
-  selectInput(
+  selectizeInput(
     inputId = "epsg_trk",
     label = "Transform Track to EPSG Code:",
-    choices = na.omit(epsg_data$code),
-    selected = input$epsg_env
+    choices = sort(na.omit(epsg_data$code)),
+    selected = input$epsg_env,
+    options = list(maxOptions = 10000)
   )
 })
 # Choices of ID input
