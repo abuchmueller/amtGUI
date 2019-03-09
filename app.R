@@ -414,6 +414,7 @@ ui <- dashboardPage(skin = "green",
 
       tabItem(
         tabName = "plot",
+<<<<<<< HEAD
         fluidRow(
           column(
             width = 12,
@@ -427,6 +428,10 @@ ui <- dashboardPage(skin = "green",
             tags$style(type = "text/css", "#mymap {height: calc(100vh - 110px) !important;}"),
             leafletOutput("mymap")
           )
+=======
+        fluidPage(
+          leafletOutput("mymap", height = 1000)
+>>>>>>> 9d0ea9987a2db94ada7e714753623efb8578d66f
         )
       ),
 
