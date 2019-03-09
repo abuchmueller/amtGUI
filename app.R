@@ -784,7 +784,7 @@ output$x <- renderUI({
     label = "Longitude:", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign longitude',
+      placeholder = 'Please assign longitude.',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
@@ -801,7 +801,7 @@ output$y <- renderUI({
     label = "Latitude:", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign latitude',
+      placeholder = 'Please assign latitude.',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
@@ -818,7 +818,7 @@ output$ts <- renderUI({
     label = "Timestamp:", 
     choices = colnames(csvInput()),
     options = list(
-      placeholder = 'Assign timestamp',
+      placeholder = 'Please assign timestamp.',
       onInitialize = I('function() { this.setValue(""); }')
     )
   )
@@ -832,7 +832,7 @@ output$epsg_trk <- renderUI({
   )
   selectInput(
     inputId = "epsg_trk",
-    label = "Transform CRS by EPSG Code:",
+    label = "Transform Track to EPSG Code:",
     choices = na.omit(epsg_data$code),
     selected = input$epsg_env
   )
@@ -948,15 +948,17 @@ output$fetch_dr <- renderUI({
 })
 # Display data frame or column summary of track 
 output$display_trk <- renderUI({
-  if (!is.null(csvInput()) && !is.null(envInput()) &&
-      input$epsg_env != '') {
-    radioButtons(
-      inputId = "display_trk",
-      label = "Display",
-      choices = c("Data Frame", "Column Summary"),
-      selected = "Data Frame"
-    )
-  }
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
+  radioButtons(
+    inputId = "display_trk",
+    label = "Display",
+    choices = c("Data Frame", "Column Summary"),
+    selected = "Data Frame"
+  )
 })
 # Create a track: select relevant columns and omit NAs
 dat <- reactive({
@@ -987,7 +989,7 @@ trk <- reactive({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, ''),
+    need(input$ts, ''),     
     need(input$daterange[1], 'Please select start of date range.'),
     need(input$daterange[2], 'Please select end of date range.')
   )
@@ -1186,9 +1188,13 @@ trk_df <- reactive({
 # Display data frame of track
 output$contents_trk <- DT::renderDataTable({
   validate(
-    need(input$x, 'Please assign longitude.'),
-    need(input$y, 'Please assign latitude.'),
-    need(input$ts, 'Please assign timestamp.')
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, ''),
+    need(!is.null(input$display_trk), '')
+    # need(input$x, 'Please assign longitude.'),
+    # need(input$y, 'Please assign latitude.'),
+    # need(input$ts, 'Please assign timestamp.')
   )
   if (input$display_trk == "Data Frame") {
     DT::datatable(
@@ -1216,7 +1222,8 @@ output$summary_trk <- renderPrint({
   validate(
     need(input$x, ''),
     need(input$y, ''),
-    need(input$ts, '')
+    need(input$ts, ''),
+    need(!is.null(input$display_trk), '')
   )
   if (input$display_trk == "Column Summary") {
     summary(object = trk_df())
