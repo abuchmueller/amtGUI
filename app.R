@@ -66,7 +66,8 @@ ui <- dashboardPage(skin = "green",
         fluidRow(
           column(
             width = 12,
-            h4("Upload Tracking Data and Assign Corresponding EPSG Code")
+            h4("Upload Tracking Data and Assign Corresponding EPSG Code"),
+            br()
           )
         ),
         fluidRow(
@@ -96,6 +97,7 @@ ui <- dashboardPage(skin = "green",
               accept = c("text/csv",
                          "text/comma-separated-values,text/plain", ".csv")
             ),
+            # Action button to reset input
             actionButton('reset', 'Reset Input')
           ),
           column(
@@ -226,9 +228,22 @@ ui <- dashboardPage(skin = "green",
 
       tabItem(
         tabName = "map",
-        # Sidebar layout with input and output definitions
-        sidebarLayout(
-          sidebarPanel = sidebarPanel(
+        fluidRow(
+          column(
+            width = 12,
+            h4(textOutput(outputId = "env_head")),
+            br()
+          )
+        ),
+        fluidRow(
+          column(
+            width = 3,
+            # Example data set
+            uiOutput(outputId = "ex_data_env"),
+            # EPSG Code TIF
+            uiOutput(outputId = "epsg_env")
+          ),
+          column(
             width = 3,
             # Input: Select a file
             fileInput(
@@ -237,24 +252,55 @@ ui <- dashboardPage(skin = "green",
               multiple = TRUE
             ),
             # Action button to reset input
-            actionButton('reset_env', 'Reset Input'),
-            # Horizontal line
-            hr(),
-            # Example data set
-            uiOutput(outputId = "ex_data_env"),
-            # EPSG Code TIF
-            uiOutput(outputId = "epsg_env")
-          ),
-          mainPanel = mainPanel(
+            actionButton('reset_env', 'Reset Input')
+          )
+        ),
+        fluidRow(
+          column(
+            width = 12,
+            br(),
+            br(),
             # Headline
             h4(textOutput(outputId = "epsg_head")),
             # Sub headline (instructions)
             h5(textOutput(outputId = "epsg_sub_head")),
             br(),
             DT::dataTableOutput(outputId = "contents_env")
-          )
+          )    
         )
       ),
+
+      # tabItem(
+      #   tabName = "map",
+      #   # Sidebar layout with input and output definitions
+      #   sidebarLayout(
+      #     sidebarPanel = sidebarPanel(
+      #       width = 3,
+      #       # Input: Select a file
+      #       fileInput(
+      #         inputId = "dataset_env",
+      #         label = "Choose TIF File",
+      #         multiple = TRUE
+      #       ),
+      #       # Action button to reset input
+      #       actionButton('reset_env', 'Reset Input'),
+      #       # Horizontal line
+      #       hr(),
+      #       # Example data set
+      #       uiOutput(outputId = "ex_data_env"),
+      #       # EPSG Code TIF
+      #       uiOutput(outputId = "epsg_env")
+      #     ),
+      #     mainPanel = mainPanel(
+      #       # Headline
+      #       h4(textOutput(outputId = "epsg_head")),
+      #       # Sub headline (instructions)
+      #       h5(textOutput(outputId = "epsg_sub_head")),
+      #       br(),
+      #       DT::dataTableOutput(outputId = "contents_env")
+      #     )
+      #   )
+      # ),
 
 # Track Creation Tab ------------------------------------------------------
       tabItem(
@@ -562,6 +608,15 @@ output$summary <- renderPrint({
 
 # Map Upload --------------------------------------------------------------
 
+# Show headline of tab
+output$env_head <- renderText({
+  validate(
+    need(csvInput(), 'Please upload tracking data first.'),
+    need(input$epsg_csv, 'Please assign an EPSG code to the tracking data first.')
+  )
+  "Upload Map of Environmental Covariates and Assign Corresponding EPSG Code"
+})
+
 # Upload and reset-button to switch between upload and example TIF
 values_env <- reactiveValues(upload_state = NULL)
 
@@ -606,7 +661,6 @@ envInput <- reactive({
       names(r_stack) <- names_list
       r_stack
     }
-    
   } else if (values_env$upload_state == 'reset') {
     # Upload reseted
     switch (input$ex_data_env,
@@ -633,7 +687,7 @@ output$ex_data_env <- renderUI({
   )
   selectInput(
     inputId = "ex_data_env",
-    label = "Choose Example Data:",
+    label = "Load Example Map:",
     choices = c("None", "Fisher NY Land Use Area")
   )
 })
@@ -666,11 +720,12 @@ output$epsg_env <- renderUI({
       #                 )
 )
 })
-# Show headline for EPSG Code table
+
+# Show headline of EPSG Code table
 output$epsg_head <- renderText({
   validate(
-    need(csvInput(), 'Please upload tracking data first.'),
-    need(input$epsg_csv, 'Please assign an EPSG code to the tracking data first.')
+    need(csvInput(), ''),
+    need(input$epsg_csv, '')
   )
   if (!is.null(epsg_env_detected())) {
     "Found EPSG Code(s) for Uploaded File(s)"
