@@ -6,7 +6,7 @@ library(leaflet)
 
 
 # Example data
-# Track / relocation data
+# Tracking data
 fisher_ny <- readr::read_csv("data/Martes pennanti LaPoint New York.csv")
 # Subset relevant columns
 fisher_ny <- fisher_ny %>% select(
@@ -253,7 +253,7 @@ ui <- dashboardPage(skin = "green",
             DT::dataTableOutput(outputId = "contents_bursts")
           ),
           column(
-            width = 6, offset = 1,
+            width = 5, offset = 1,
             # Headline
             h4(textOutput(outputId = "env_info_head")),
             # Sub headline (instructions)
@@ -287,67 +287,68 @@ ui <- dashboardPage(skin = "green",
 
       tabItem(
         tabName = "model",
-        # Enable to clear all inputs of modeling tab by "clear model" button
+        # Enable to clear all inputs of tab by clear button
         shinyjs::useShinyjs(),
-        div(id = "modeling_tab",
-        fluidRow(
-          column(
-            width = 4,
-            # Headline
-            h4(textOutput(outputId = "modeling_head")),
-            # Choose a model
-            uiOutput(outputId = "model")
+        div(
+          id = "modeling_tab",
+          fluidRow(
+            column(
+              width = 4,
+              # Headline
+              h4(textOutput(outputId = "modeling_head")),
+              # Choose a model
+              uiOutput(outputId = "model")
+            ),
+            column(
+              width = 3,
+              br(),
+              br(),
+              # Set number of random steps per relocation (ISSF)
+              uiOutput(outputId = "rand_stps"),
+              # Set number of random points (RSF)
+              uiOutput(outputId = "rand_points")
+            )
           ),
-          column(
-            width = 3,
-            br(),
-            br(),
-            # Set number of random steps per relocation (ISSF)
-            uiOutput(outputId = "rand_stps"),
-            # Set number of random points (RSF)
-            uiOutput(outputId = "rand_points")
+          fluidRow(
+            column(
+              width = 4,
+              br(),
+              uiOutput(outputId = "mod_var")
+            ),
+            column(
+              width = 3,
+              br(),
+              # Select no. of interaction terms to add
+              uiOutput(outputId = "inter_no")
+            )
+          ),
+          fluidRow(
+            column(
+              width = 2,
+              # Select 1st interaction
+              uiOutput(outputId = "inter_1")
+            ),
+            column(
+              width = 2,
+              # Select 2nd interaction
+              uiOutput(outputId = "inter_2")
+            ),
+            column(
+              width = 2,
+              # Select 3rd interaction
+              uiOutput(outputId = "inter_3")
+            ),
+            column(
+              width = 2,
+              # Select 4th interaction
+              uiOutput(outputId = "inter_4")
+            ),
+            column(
+              width = 2,
+              # Select 5th interaction
+              uiOutput(outputId = "inter_5")
+            )
           )
-        ),
-        fluidRow(
-          column(
-            width = 4,
-            br(),
-            uiOutput(outputId = "mod_var")
-          ),
-          column(
-            width = 3,
-            br(),
-            # Select no. of interaction terms to add
-            uiOutput(outputId = "inter_no")
-          )
-        ),
-        fluidRow(
-          column(
-            width = 2,
-            # Select 1st interaction
-            uiOutput(outputId = "inter_1")
-          ),
-          column(
-            width = 2,
-            # Select 2nd interaction
-            uiOutput(outputId = "inter_2")
-          ),
-          column(
-            width = 2,
-            # Select 3rd interaction
-            uiOutput(outputId = "inter_3")
-          ),
-          column(
-            width = 2,
-            # Select 4th interaction
-            uiOutput(outputId = "inter_4")
-          ),
-          column(
-            width = 2,
-            # Select 5th interaction
-            uiOutput(outputId = "inter_5")
-          )
-        )
         ), # End of clear inputs
         fluidRow(
           column(
@@ -395,7 +396,7 @@ server <- function(input, output, session) {
 # Increase maximum upload size from 5 MB to 30 MB
 options(shiny.maxRequestSize = 30*1024^2)
 
-# Upload data and reset-button to switch between upload and R data sets
+# Upload data and reset-button to switch between upload and example data set
 values_csv <- reactiveValues(upload_state = NULL)
 
 observeEvent(input$dataset_csv, {
@@ -471,7 +472,7 @@ output$summary <- renderPrint({
 
 # Map Upload --------------------------------------------------------------
 
-
+# Upload and reset-button to switch between upload and example TIF
 values_env <- reactiveValues(upload_state = NULL)
 
 observeEvent(input$dataset_env, {
@@ -484,46 +485,44 @@ observeEvent(input$reset_env, {
 envInput <- reactive({
   validate(
     need(csvInput(), ''),
-    need(input$epsg_csv, '')
+    need(input$epsg_csv, ''),
+    need(!is.null(input$ex_data_env), '')
   )
-  # Example data selectInput needs to be loaded (not null)
-  if (!is.null(input$ex_data_env)) {
-    # No upload
-    if (is.null(values_env$upload_state)){
-      switch (input$ex_data_env,
-              "Fisher NY Land Use Area" = land_use_fisher_ny,
-              "None" = return()
-      )
-    } else if (values_env$upload_state == 'uploaded') {
-      # File uploaded
-      # Get names of uploaded TIFs (named X0, X1, ... otherwise)
-      names_list <- lapply(input$dataset_env$name, function(x) x)
-      names_list <- gsub(".tif", '', names_list)
-      
-      # Store uploaded TIF file(s) as raster layer(s) in list
-      raster_list <- lapply(input$dataset_env$datapath, raster::raster)
-  
-      # Test whether multiple files are uploaded
-      # Single file: access raster layer in list
-      if (length(raster_list) == 1) {
-        # Rename
-        names(raster_list[[1]]) <- names_list
-        raster_list[[1]]
-      } else {
-        # Multiple files: store raster layers in list as raster stack
-        r_stack <- raster::stack(raster_list)
-        # Rename
-        names(r_stack) <- names_list
-        r_stack
-      }
-      
-    } else if (values_env$upload_state == 'reset') {
-      # Upload reseted
-      switch (input$ex_data_env,
-              "Fisher NY Land Use Area" = land_use_fisher_ny,
-              "None" = return()
-      )
+  # No upload
+  if (is.null(values_env$upload_state)){
+    switch (input$ex_data_env,
+            "Fisher NY Land Use Area" = land_use_fisher_ny,
+            "None" = return()
+    )
+  } else if (values_env$upload_state == 'uploaded') {
+    # File uploaded
+    # Get names of uploaded TIFs (named X0, X1, ... otherwise)
+    names_list <- lapply(input$dataset_env$name, function(x) x)
+    names_list <- gsub(".tif", '', names_list)
+    
+    # Store uploaded TIF file(s) as raster layer(s) in list
+    raster_list <- lapply(input$dataset_env$datapath, raster::raster)
+
+    # Test whether multiple files are uploaded
+    # Single file: access raster layer in list
+    if (length(raster_list) == 1) {
+      # Rename
+      names(raster_list[[1]]) <- names_list
+      raster_list[[1]]
+    } else {
+      # Multiple files: store raster layers in list as raster stack
+      r_stack <- raster::stack(raster_list)
+      # Rename
+      names(r_stack) <- names_list
+      r_stack
     }
+    
+  } else if (values_env$upload_state == 'reset') {
+    # Upload reseted
+    switch (input$ex_data_env,
+            "Fisher NY Land Use Area" = land_use_fisher_ny,
+            "None" = return()
+    )
   }
 })
 # Rename environmental data input if required
@@ -580,8 +579,8 @@ output$epsg_env <- renderUI({
 # Show headline for EPSG Code table
 output$epsg_head <- renderText({
   validate(
-    need(csvInput(), 'Please upload track data first.'),
-    need(input$epsg_csv, 'Please assign an EPSG code to the track data first.')
+    need(csvInput(), 'Please upload tracking data first.'),
+    need(input$epsg_csv, 'Please assign an EPSG code to the tracking data first.')
   )
   if (!is.null(epsg_env_detected())) {
     "Found EPSG Code(s) for Uploaded File(s)"
@@ -625,7 +624,7 @@ output$track_head <- renderText({
              input$epsg_env == '') {
     "Please assign an EPSG code to the map of environmental covariates first."
   } else {
-    "Please upload track data and map first."
+    "Please upload tracking data and map first."
   }
 })
 # Choose x (longitude)
@@ -679,7 +678,7 @@ output$ts <- renderUI({
     )
   )
 })
-# EPSG Code Transformation of track data (CSV)
+# EPSG Code Transformation of tracking data (CSV)
 output$epsg_trk <- renderUI({
   validate(
     need(csvInput(), ''),
@@ -773,7 +772,7 @@ output$tol_min <- renderUI({
     step = 1
   )
 })
-# Dynamic dateRangeInput for track data frame ----
+# Dynamic dateRangeInput for tracking data frame ----
 output$fetch_dr <- renderUI({
   validate(
     need(input$ts, ''),
@@ -783,6 +782,9 @@ output$fetch_dr <- renderUI({
     min.date <- min(dat_excl_id()$ts)
     max.date <- max(dat_excl_id()$ts)
   } else {
+    validate(
+      need(input$id_trk, 'Please select at least one ID.')
+    )
     # Subset of "dat" data frame by selected IDs
     dat_id <- dat() %>% filter(id %in% input$id_trk)
     min.date <- min(dat_id$ts) #min(dat()$ts)
@@ -849,7 +851,7 @@ trk <- reactive({
     # Subset data according to selected dateRangeInput
     dat_excl_id_df <- dat_excl_id() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
-    # Assign known EPSG Code to track data
+    # Assign known EPSG Code to tracking data
     track <- make_track(dat_excl_id_df,
                         x, y, ts,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
@@ -869,7 +871,7 @@ trk <- reactive({
         # Subset data according to selected dateRangeInput
         ts >= input$daterange[1] & ts <= input$daterange[2]
       )
-    # Assign known EPSG Code to track data (no transformation necessary)
+    # Assign known EPSG Code to tracking data (no transformation necessary)
     if (input$epsg_csv == input$epsg_trk) {
       track_multi <- dat_df %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
@@ -898,7 +900,7 @@ trk <- reactive({
         # Subset data according to selected dateRangeInput
         ts >= input$daterange[1] & ts <= input$daterange[2]
       )
-    # Assign known EPSG Code to track data
+    # Assign known EPSG Code to tracking data
     track_one <- make_track(dat_df,
                             x, y, ts, id = id,
                             crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
@@ -1034,7 +1036,7 @@ trk_df <- reactive({
                                Burst = burst_)
     }
   }
-}) 
+})
 
 # Display data frame of track
 output$contents_trk <- DT::renderDataTable({
@@ -1091,8 +1093,8 @@ output$min_burst_head <- renderText({
 # Only retain bursts with a minimum number of relocations
 output$min_burst <- renderUI({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   numericInput(
     inputId = "min_burst",
@@ -1105,8 +1107,8 @@ output$min_burst <- renderUI({
 # Show headline for bursts data frame
 output$bursts_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, '')
   )
   "No. of Bursts Remaining"
@@ -1114,8 +1116,8 @@ output$bursts_head <- renderText({
 # Table: No. of bursts remaining (given minimum no. of relocations per burst)
 bursts_df <- reactive({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, '')
   )
   # Multiple IDs selected
@@ -1246,24 +1248,24 @@ output$contents_bursts <- DT::renderDataTable({
 # Show headline for time of day drop down
 output$tod_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Time of Day Covariate"
 })
 # Sub headline (instruction when to use)
 output$tod_sub_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Applicable when building a model with integrated step selection function only."
 })
 # Time of Day
 output$tod <- renderUI({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   selectInput(
     inputId = "tod",
@@ -1422,8 +1424,8 @@ output$contents_tod <- DT::renderDataTable({
 output$env_info_head <- renderText({
   validate(
     need(envInput(), ''),
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Environmental Covariates"
 })
@@ -1431,8 +1433,8 @@ output$env_info_head <- renderText({
 output$env_info_sub_head <- renderText({
   validate(
     need(envInput(), ''),
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Edit names of covariates and convert to categorical or continuous."
 })
@@ -1456,10 +1458,10 @@ env_info <- reactive({
 output$env_df = renderRHandsontable({
   validate(
     need(env(), ''),
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
-  rhandsontable(env_info(), rowHeaders = NULL) %>%
+  rhandsontable(env_info(), rowHeaders = NULL, stretchH = "all") %>%
     # Center checkbox column "Categorical"
     hot_col(col = "Categorical", halign = "htCenter")
 })
@@ -1470,8 +1472,8 @@ output$env_df = renderRHandsontable({
 # Show headline for EPSG Code table
 output$modeling_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, 'Please create a track and add covariates first.')
   )
   "Conditional Logit Model"
@@ -1479,8 +1481,8 @@ output$modeling_head <- renderText({
 # Choose a model
 output$model <- renderUI({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, '')
   )
   selectInput(
