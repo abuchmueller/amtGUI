@@ -154,77 +154,6 @@ ui <- dashboardPage(skin = "green",
         )
       ),      
 
-      # tabItem(
-      #   tabName = "data",
-      #   # Sidebar layout with input and output definitions
-      #   sidebarLayout(
-      #     sidebarPanel = sidebarPanel(
-      #       width = 3,
-      #       # Input: Select a file
-      #       fileInput(
-      #         inputId = "dataset_csv",
-      #         label = "Choose CSV File",
-      #         multiple = TRUE,
-      #         accept = c("text/csv",
-      #                    "text/comma-separated-values,text/plain", ".csv")
-      #       ),
-      #       actionButton('reset', 'Reset Input'),
-      #       # Input: Checkbox if file has header
-      #       checkboxInput(
-      #         inputId = "header",
-      #         label = "File has Header",
-      #         value = TRUE
-      #       ),
-      #       # Input: Select separator
-      #       radioButtons(
-      #         inputId = "sep",
-      #         label = "Separator",
-      #         choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
-      #         selected = ","
-      #       ),
-      #       # Input: Select quotes
-      #       radioButtons(
-      #         inputId = "quote",
-      #         label = "Quote",
-      #         choices = c(None = "", "Double Quote" = '"', 
-      #                     "Single Quote" = "'"),
-      #         selected = '"'
-      #       ),
-      #       # Horizontal line
-      #       hr(),
-      #       # Example Datasets
-      #       selectInput(
-      #         inputId = "ex_data_csv",
-      #         label = "Choose Example Data:",
-      #         choices = c("None", "Fisher NY")
-      #       ),
-      #       # Input: Select EPSG Code
-      #       selectInput(
-      #         inputId = "epsg_csv",
-      #         label = "Assign EPSG Code:",
-      #         choices = c('', sort(na.omit(epsg_data$code))),
-      #         selected = 4326 #''
-      #       ),
-      #       hr(),
-      #       #Input: Select data table or summary of data set
-      #       radioButtons(
-      #         inputId = "display",
-      #         label = "Display",
-      #         choices = c("Data Frame", "Column Summary"),
-      #         selected = "Data Frame"
-      #       )
-      #     ),
-      #     mainPanel = mainPanel(
-      #       # Add horizontal scroll bar to data table
-      #       div(
-      #         style = 'overflow-x: scroll', 
-      #         DT::dataTableOutput(outputId = "contents")
-      #       ),
-      #       verbatimTextOutput(outputId = "summary")
-      #     )
-      #   )
-      # ),
-
 # Upload Map Tab ----------------------------------------------------------
 
       tabItem(
@@ -271,39 +200,8 @@ ui <- dashboardPage(skin = "green",
         )
       ),
 
-      # tabItem(
-      #   tabName = "map",
-      #   # Sidebar layout with input and output definitions
-      #   sidebarLayout(
-      #     sidebarPanel = sidebarPanel(
-      #       width = 3,
-      #       # Input: Select a file
-      #       fileInput(
-      #         inputId = "dataset_env",
-      #         label = "Choose TIF File",
-      #         multiple = TRUE
-      #       ),
-      #       # Action button to reset input
-      #       actionButton('reset_env', 'Reset Input'),
-      #       # Horizontal line
-      #       hr(),
-      #       # Example data set
-      #       uiOutput(outputId = "ex_data_env"),
-      #       # EPSG Code TIF
-      #       uiOutput(outputId = "epsg_env")
-      #     ),
-      #     mainPanel = mainPanel(
-      #       # Headline
-      #       h4(textOutput(outputId = "epsg_head")),
-      #       # Sub headline (instructions)
-      #       h5(textOutput(outputId = "epsg_sub_head")),
-      #       br(),
-      #       DT::dataTableOutput(outputId = "contents_env")
-      #     )
-      #   )
-      # ),
-
 # Track Creation Tab ------------------------------------------------------
+
       tabItem(
         tabName = "track",
         fluidRow(
@@ -373,6 +271,7 @@ ui <- dashboardPage(skin = "green",
       ),
 
 # Add Additional Covariates Tab -------------------------------------------
+
       tabItem(
         tabName = "covariates",
         fluidRow(  
@@ -2318,7 +2217,10 @@ output$mymap <- renderLeaflet({
     need(input$y, ''),
     need(input$ts, '')
   )
-  amt::inspect(trk())
+  # For no or one ID only
+  if (ifelse(input$id == '', yes = 1, no = length(input$id_trk)) == 1) {
+    amt::inspect(trk())
+  }
 })
 
 
