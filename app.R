@@ -361,6 +361,7 @@ ui <- dashboardPage(skin = "green",
                 # Data table: summary of sampling rate
                 column(
                   width = 12,
+                  # Headline
                   h4(textOutput(outputId = "samp_rate_head")),
                   DT::dataTableOutput(outputId = "summary_samp_rate")
                 )
@@ -413,9 +414,19 @@ ui <- dashboardPage(skin = "green",
 
       tabItem(
         tabName = "plot",
-        bootstrapPage(
-          tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
-          leafletOutput("mymap", width = "100%", height = "100%")
+        fluidRow(
+          column(
+            width = 12,
+            # Headline
+            h4(textOutput(outputId = "visual_head"))
+          )
+        ),
+        fluidRow(
+          column(
+            width = 12,
+            tags$style(type = "text/css", "#mymap {height: calc(100vh - 110px) !important;}"),
+            leafletOutput("mymap")
+          )
         )
       ),
 
@@ -2279,8 +2290,31 @@ output$report <- downloadHandler(
 
 # Visualize ----------------------------------------------------------------
 
-
+# Show headline for "Minimum No. of Relocations per Burst" drop down
+output$visual_head <- renderText({
+  validate(
+    need(!is.null(input$x), 'Please create a track first.'),
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
+  # Multiple IDs selected
+  if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
+    "Please select a single ID or do not group by ID."
+  } else if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) == 1) {
+    # One ID selected
+    paste0("Relocations of ID: ", input$id_trk)
+  } else {
+    "Relocations"
+  }
+})
+# Interactive leaflet map
 output$mymap <- renderLeaflet({
+  validate(
+    need(input$x, ''),
+    need(input$y, ''),
+    need(input$ts, '')
+  )
   amt::inspect(trk())
 })
 
