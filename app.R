@@ -1,13 +1,12 @@
 library(shiny)
 library(shinydashboard)
-#library(ggplot2)
 library(amt)
 library(rhandsontable)
 library(leaflet)
 
 
 # Example data
-# Track / relocation data
+# Tracking data
 fisher_ny <- readr::read_csv("data/Martes pennanti LaPoint New York.csv")
 # Subset relevant columns
 fisher_ny <- fisher_ny %>% select(
@@ -61,12 +60,34 @@ ui <- dashboardPage(skin = "green",
     tabItems(
 
 # Data Upload Tab ---------------------------------------------------------
-
+      
       tabItem(
         tabName = "data",
-        # Sidebar layout with input and output definitions
-        sidebarLayout(
-          sidebarPanel = sidebarPanel(
+        fluidRow(
+          column(
+            width = 12,
+            h4("Upload Tracking Data and Assign Corresponding EPSG Code"),
+            br()
+          )
+        ),
+        fluidRow(
+          column(
+            width = 3,
+            # Example Datasets
+            selectInput(
+              inputId = "ex_data_csv",
+              label = "Load Example Data:",
+              choices = c("None", "Fisher NY")
+            ),
+            # Input: Select EPSG Code
+            selectInput(
+              inputId = "epsg_csv",
+              label = "Assign EPSG Code:",
+              choices = c('', sort(na.omit(epsg_data$code))),
+              selected = 4326 #''
+            )
+          ),
+          column(
             width = 3,
             # Input: Select a file
             fileInput(
@@ -76,13 +97,11 @@ ui <- dashboardPage(skin = "green",
               accept = c("text/csv",
                          "text/comma-separated-values,text/plain", ".csv")
             ),
-            actionButton('reset', 'Reset Input'),
-            # Input: Checkbox if file has header
-            checkboxInput(
-              inputId = "header",
-              label = "File has Header",
-              value = TRUE
-            ),
+            # Action button to reset input
+            actionButton('reset', 'Reset Input')
+          ),
+          column(
+            width = 2,
             # Input: Select separator
             radioButtons(
               inputId = "sep",
@@ -90,6 +109,15 @@ ui <- dashboardPage(skin = "green",
               choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
               selected = ","
             ),
+            # Input: Checkbox if file has header
+            checkboxInput(
+              inputId = "header",
+              label = "File has Header",
+              value = TRUE
+            )
+          ),
+          column(
+            width = 2,
             # Input: Select quotes
             radioButtons(
               inputId = "quote",
@@ -97,49 +125,125 @@ ui <- dashboardPage(skin = "green",
               choices = c(None = "", "Double Quote" = '"', 
                           "Single Quote" = "'"),
               selected = '"'
-            ),
-            # Horizontal line
-            hr(),
-            # Example Datasets
-            selectInput(
-              inputId = "ex_data_csv",
-              label = "Choose Example Data:",
-              choices = c("None", "Fisher NY")
-            ),
-            # Input: Select EPSG Code
-            selectInput(
-              inputId = "epsg_csv",
-              label = "Assign EPSG Code:",
-              choices = c('', sort(na.omit(epsg_data$code))),
-              selected = 4326 #''
-            ),
-            hr(),
-            #Input: Select data table or summary of data set
-            radioButtons(
-              inputId = "display",
-              label = "Display",
-              choices = c("Data Frame", "Column Summary"),
-              selected = "Data Frame"
             )
-          ),
-          mainPanel = mainPanel(
-            # Add horizontal scroll bar to data table
-            div(
-              style = 'overflow-x: scroll', 
-              DT::dataTableOutput(outputId = "contents")
-            ),
-            verbatimTextOutput(outputId = "summary")
+          )
+        ),
+        br(),
+        fluidRow(
+          column(
+            width = 12,
+            # Tabs within fluid row
+            tabsetPanel(
+              tabPanel(
+                title = "Data Frame",
+                br(),
+                # Add horizontal scroll bar to data table
+                div(
+                  style = 'overflow-x: scroll', 
+                  DT::dataTableOutput(outputId = "contents")
+                )
+              ),
+              tabPanel(
+                title = "Column Summary",
+                br(),
+                verbatimTextOutput(outputId = "summary")    
+              )
+            )
           )
         )
-      ),
+      ),      
+
+      # tabItem(
+      #   tabName = "data",
+      #   # Sidebar layout with input and output definitions
+      #   sidebarLayout(
+      #     sidebarPanel = sidebarPanel(
+      #       width = 3,
+      #       # Input: Select a file
+      #       fileInput(
+      #         inputId = "dataset_csv",
+      #         label = "Choose CSV File",
+      #         multiple = TRUE,
+      #         accept = c("text/csv",
+      #                    "text/comma-separated-values,text/plain", ".csv")
+      #       ),
+      #       actionButton('reset', 'Reset Input'),
+      #       # Input: Checkbox if file has header
+      #       checkboxInput(
+      #         inputId = "header",
+      #         label = "File has Header",
+      #         value = TRUE
+      #       ),
+      #       # Input: Select separator
+      #       radioButtons(
+      #         inputId = "sep",
+      #         label = "Separator",
+      #         choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
+      #         selected = ","
+      #       ),
+      #       # Input: Select quotes
+      #       radioButtons(
+      #         inputId = "quote",
+      #         label = "Quote",
+      #         choices = c(None = "", "Double Quote" = '"', 
+      #                     "Single Quote" = "'"),
+      #         selected = '"'
+      #       ),
+      #       # Horizontal line
+      #       hr(),
+      #       # Example Datasets
+      #       selectInput(
+      #         inputId = "ex_data_csv",
+      #         label = "Choose Example Data:",
+      #         choices = c("None", "Fisher NY")
+      #       ),
+      #       # Input: Select EPSG Code
+      #       selectInput(
+      #         inputId = "epsg_csv",
+      #         label = "Assign EPSG Code:",
+      #         choices = c('', sort(na.omit(epsg_data$code))),
+      #         selected = 4326 #''
+      #       ),
+      #       hr(),
+      #       #Input: Select data table or summary of data set
+      #       radioButtons(
+      #         inputId = "display",
+      #         label = "Display",
+      #         choices = c("Data Frame", "Column Summary"),
+      #         selected = "Data Frame"
+      #       )
+      #     ),
+      #     mainPanel = mainPanel(
+      #       # Add horizontal scroll bar to data table
+      #       div(
+      #         style = 'overflow-x: scroll', 
+      #         DT::dataTableOutput(outputId = "contents")
+      #       ),
+      #       verbatimTextOutput(outputId = "summary")
+      #     )
+      #   )
+      # ),
 
 # Upload Map Tab ----------------------------------------------------------
 
       tabItem(
         tabName = "map",
-        # Sidebar layout with input and output definitions
-        sidebarLayout(
-          sidebarPanel = sidebarPanel(
+        fluidRow(
+          column(
+            width = 12,
+            h4(textOutput(outputId = "env_head")),
+            br()
+          )
+        ),
+        fluidRow(
+          column(
+            width = 3,
+            # Example data set
+            uiOutput(outputId = "ex_data_env"),
+            # EPSG Code TIF
+            uiOutput(outputId = "epsg_env")
+          ),
+          column(
             width = 3,
             # Input: Select a file
             fileInput(
@@ -148,24 +252,55 @@ ui <- dashboardPage(skin = "green",
               multiple = TRUE
             ),
             # Action button to reset input
-            actionButton('reset_env', 'Reset Input'),
-            # Horizontal line
-            hr(),
-            # Example data set
-            uiOutput(outputId = "ex_data_env"),
-            # EPSG Code TIF
-            uiOutput(outputId = "epsg_env")
-          ),
-          mainPanel = mainPanel(
+            actionButton('reset_env', 'Reset Input')
+          )
+        ),
+        fluidRow(
+          column(
+            width = 12,
+            br(),
+            br(),
             # Headline
             h4(textOutput(outputId = "epsg_head")),
             # Sub headline (instructions)
             h5(textOutput(outputId = "epsg_sub_head")),
             br(),
             DT::dataTableOutput(outputId = "contents_env")
-          )
+          )    
         )
       ),
+
+      # tabItem(
+      #   tabName = "map",
+      #   # Sidebar layout with input and output definitions
+      #   sidebarLayout(
+      #     sidebarPanel = sidebarPanel(
+      #       width = 3,
+      #       # Input: Select a file
+      #       fileInput(
+      #         inputId = "dataset_env",
+      #         label = "Choose TIF File",
+      #         multiple = TRUE
+      #       ),
+      #       # Action button to reset input
+      #       actionButton('reset_env', 'Reset Input'),
+      #       # Horizontal line
+      #       hr(),
+      #       # Example data set
+      #       uiOutput(outputId = "ex_data_env"),
+      #       # EPSG Code TIF
+      #       uiOutput(outputId = "epsg_env")
+      #     ),
+      #     mainPanel = mainPanel(
+      #       # Headline
+      #       h4(textOutput(outputId = "epsg_head")),
+      #       # Sub headline (instructions)
+      #       h5(textOutput(outputId = "epsg_sub_head")),
+      #       br(),
+      #       DT::dataTableOutput(outputId = "contents_env")
+      #     )
+      #   )
+      # ),
 
 # Track Creation Tab ------------------------------------------------------
       tabItem(
@@ -254,7 +389,7 @@ ui <- dashboardPage(skin = "green",
             DT::dataTableOutput(outputId = "contents_bursts")
           ),
           column(
-            width = 6, offset = 1,
+            width = 5, offset = 1,
             # Headline
             h4(textOutput(outputId = "env_info_head")),
             # Sub headline (instructions)
@@ -287,67 +422,68 @@ ui <- dashboardPage(skin = "green",
 
       tabItem(
         tabName = "model",
-        # Enable to clear all inputs of modeling tab by "clear model" button
+        # Enable to clear all inputs of tab by clear button
         shinyjs::useShinyjs(),
-        div(id = "modeling_tab",
-        fluidRow(
-          column(
-            width = 4,
-            # Headline
-            h4(textOutput(outputId = "modeling_head")),
-            # Choose a model
-            uiOutput(outputId = "model")
+        div(
+          id = "modeling_tab",
+          fluidRow(
+            column(
+              width = 4,
+              # Headline
+              h4(textOutput(outputId = "modeling_head")),
+              # Choose a model
+              uiOutput(outputId = "model")
+            ),
+            column(
+              width = 3,
+              br(),
+              br(),
+              # Set number of random steps per relocation (ISSF)
+              uiOutput(outputId = "rand_stps"),
+              # Set number of random points (RSF)
+              uiOutput(outputId = "rand_points")
+            )
           ),
-          column(
-            width = 3,
-            br(),
-            br(),
-            # Set number of random steps per relocation (ISSF)
-            uiOutput(outputId = "rand_stps"),
-            # Set number of random points (RSF)
-            uiOutput(outputId = "rand_points")
+          fluidRow(
+            column(
+              width = 4,
+              br(),
+              uiOutput(outputId = "mod_var")
+            ),
+            column(
+              width = 3,
+              br(),
+              # Select no. of interaction terms to add
+              uiOutput(outputId = "inter_no")
+            )
+          ),
+          fluidRow(
+            column(
+              width = 2,
+              # Select 1st interaction
+              uiOutput(outputId = "inter_1")
+            ),
+            column(
+              width = 2,
+              # Select 2nd interaction
+              uiOutput(outputId = "inter_2")
+            ),
+            column(
+              width = 2,
+              # Select 3rd interaction
+              uiOutput(outputId = "inter_3")
+            ),
+            column(
+              width = 2,
+              # Select 4th interaction
+              uiOutput(outputId = "inter_4")
+            ),
+            column(
+              width = 2,
+              # Select 5th interaction
+              uiOutput(outputId = "inter_5")
+            )
           )
-        ),
-        fluidRow(
-          column(
-            width = 4,
-            br(),
-            uiOutput(outputId = "mod_var")
-          ),
-          column(
-            width = 3,
-            br(),
-            # Select no. of interaction terms to add
-            uiOutput(outputId = "inter_no")
-          )
-        ),
-        fluidRow(
-          column(
-            width = 2,
-            # Select 1st interaction
-            uiOutput(outputId = "inter_1")
-          ),
-          column(
-            width = 2,
-            # Select 2nd interaction
-            uiOutput(outputId = "inter_2")
-          ),
-          column(
-            width = 2,
-            # Select 3rd interaction
-            uiOutput(outputId = "inter_3")
-          ),
-          column(
-            width = 2,
-            # Select 4th interaction
-            uiOutput(outputId = "inter_4")
-          ),
-          column(
-            width = 2,
-            # Select 5th interaction
-            uiOutput(outputId = "inter_5")
-          )
-        )
         ), # End of clear inputs
         fluidRow(
           column(
@@ -395,7 +531,7 @@ server <- function(input, output, session) {
 # Increase maximum upload size from 5 MB to 30 MB
 options(shiny.maxRequestSize = 30*1024^2)
 
-# Upload data and reset-button to switch between upload and R data sets
+# Upload data and reset-button to switch between upload and example data set
 values_csv <- reactiveValues(upload_state = NULL)
 
 observeEvent(input$dataset_csv, {
@@ -449,7 +585,7 @@ csvInput <- reactive({
 # Display data frame or summary of data
 output$contents <- DT::renderDataTable({
   if (!is.null(csvInput())) {
-    if (input$display == "Data Frame") {
+    #if (input$display == "Data Frame") {
       DT::datatable(csvInput(), 
                     rownames = FALSE,
                     options = list(
@@ -458,20 +594,29 @@ output$contents <- DT::renderDataTable({
                       pageLength = 10
                     )
       )
-    }
+    #}
   }
 })
 # Summary
 output$summary <- renderPrint({
-  if (input$display == "Column Summary") {
+  #if (input$display == "Column Summary") {
     summary(object = csvInput())
-  }
+  #}
 })
 
 
 # Map Upload --------------------------------------------------------------
 
+# Show headline of tab
+output$env_head <- renderText({
+  validate(
+    need(csvInput(), 'Please upload tracking data first.'),
+    need(input$epsg_csv, 'Please assign an EPSG code to the tracking data first.')
+  )
+  "Upload Map of Environmental Covariates and Assign Corresponding EPSG Code"
+})
 
+# Upload and reset-button to switch between upload and example TIF
 values_env <- reactiveValues(upload_state = NULL)
 
 observeEvent(input$dataset_env, {
@@ -484,46 +629,43 @@ observeEvent(input$reset_env, {
 envInput <- reactive({
   validate(
     need(csvInput(), ''),
-    need(input$epsg_csv, '')
+    need(input$epsg_csv, ''),
+    need(!is.null(input$ex_data_env), '')
   )
-  # Example data selectInput needs to be loaded (not null)
-  if (!is.null(input$ex_data_env)) {
-    # No upload
-    if (is.null(values_env$upload_state)){
-      switch (input$ex_data_env,
-              "Fisher NY Land Use Area" = land_use_fisher_ny,
-              "None" = return()
-      )
-    } else if (values_env$upload_state == 'uploaded') {
-      # File uploaded
-      # Get names of uploaded TIFs (named X0, X1, ... otherwise)
-      names_list <- lapply(input$dataset_env$name, function(x) x)
-      names_list <- gsub(".tif", '', names_list)
-      
-      # Store uploaded TIF file(s) as raster layer(s) in list
-      raster_list <- lapply(input$dataset_env$datapath, raster::raster)
-  
-      # Test whether multiple files are uploaded
-      # Single file: access raster layer in list
-      if (length(raster_list) == 1) {
-        # Rename
-        names(raster_list[[1]]) <- names_list
-        raster_list[[1]]
-      } else {
-        # Multiple files: store raster layers in list as raster stack
-        r_stack <- raster::stack(raster_list)
-        # Rename
-        names(r_stack) <- names_list
-        r_stack
-      }
-      
-    } else if (values_env$upload_state == 'reset') {
-      # Upload reseted
-      switch (input$ex_data_env,
-              "Fisher NY Land Use Area" = land_use_fisher_ny,
-              "None" = return()
-      )
+  # No upload
+  if (is.null(values_env$upload_state)){
+    switch (input$ex_data_env,
+            "Fisher NY Land Use Area" = land_use_fisher_ny,
+            "None" = return()
+    )
+  } else if (values_env$upload_state == 'uploaded') {
+    # File uploaded
+    # Get names of uploaded TIFs (named X0, X1, ... otherwise)
+    names_list <- lapply(input$dataset_env$name, function(x) x)
+    names_list <- gsub(".tif", '', names_list)
+    
+    # Store uploaded TIF file(s) as raster layer(s) in list
+    raster_list <- lapply(input$dataset_env$datapath, raster::raster)
+
+    # Test whether multiple files are uploaded
+    # Single file: access raster layer in list
+    if (length(raster_list) == 1) {
+      # Rename
+      names(raster_list[[1]]) <- names_list
+      raster_list[[1]]
+    } else {
+      # Multiple files: store raster layers in list as raster stack
+      r_stack <- raster::stack(raster_list)
+      # Rename
+      names(r_stack) <- names_list
+      r_stack
     }
+  } else if (values_env$upload_state == 'reset') {
+    # Upload reseted
+    switch (input$ex_data_env,
+            "Fisher NY Land Use Area" = land_use_fisher_ny,
+            "None" = return()
+    )
   }
 })
 # Rename environmental data input if required
@@ -544,7 +686,7 @@ output$ex_data_env <- renderUI({
   )
   selectInput(
     inputId = "ex_data_env",
-    label = "Choose Example Data:",
+    label = "Load Example Map:",
     choices = c("None", "Fisher NY Land Use Area")
   )
 })
@@ -577,11 +719,12 @@ output$epsg_env <- renderUI({
       #                 )
 )
 })
-# Show headline for EPSG Code table
+
+# Show headline of EPSG Code table
 output$epsg_head <- renderText({
   validate(
-    need(csvInput(), 'Please upload track data first.'),
-    need(input$epsg_csv, 'Please assign an EPSG code to the track data first.')
+    need(csvInput(), ''),
+    need(input$epsg_csv, '')
   )
   if (!is.null(epsg_env_detected())) {
     "Found EPSG Code(s) for Uploaded File(s)"
@@ -625,7 +768,7 @@ output$track_head <- renderText({
              input$epsg_env == '') {
     "Please assign an EPSG code to the map of environmental covariates first."
   } else {
-    "Please upload track data and map first."
+    "Please upload tracking data and map first."
   }
 })
 # Choose x (longitude)
@@ -679,7 +822,7 @@ output$ts <- renderUI({
     )
   )
 })
-# EPSG Code Transformation of track data (CSV)
+# EPSG Code Transformation of tracking data (CSV)
 output$epsg_trk <- renderUI({
   validate(
     need(csvInput(), ''),
@@ -773,7 +916,7 @@ output$tol_min <- renderUI({
     step = 1
   )
 })
-# Dynamic dateRangeInput for track data frame ----
+# Dynamic dateRangeInput for tracking data frame ----
 output$fetch_dr <- renderUI({
   validate(
     need(input$ts, ''),
@@ -783,6 +926,9 @@ output$fetch_dr <- renderUI({
     min.date <- min(dat_excl_id()$ts)
     max.date <- max(dat_excl_id()$ts)
   } else {
+    validate(
+      need(input$id_trk, 'Please select at least one ID.')
+    )
     # Subset of "dat" data frame by selected IDs
     dat_id <- dat() %>% filter(id %in% input$id_trk)
     min.date <- min(dat_id$ts) #min(dat()$ts)
@@ -849,7 +995,7 @@ trk <- reactive({
     # Subset data according to selected dateRangeInput
     dat_excl_id_df <- dat_excl_id() %>% 
       filter(ts >= input$daterange[1] & ts <= input$daterange[2])
-    # Assign known EPSG Code to track data
+    # Assign known EPSG Code to tracking data
     track <- make_track(dat_excl_id_df,
                         x, y, ts,
                         crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
@@ -869,7 +1015,7 @@ trk <- reactive({
         # Subset data according to selected dateRangeInput
         ts >= input$daterange[1] & ts <= input$daterange[2]
       )
-    # Assign known EPSG Code to track data (no transformation necessary)
+    # Assign known EPSG Code to tracking data (no transformation necessary)
     if (input$epsg_csv == input$epsg_trk) {
       track_multi <- dat_df %>% nest(-id) %>%
         mutate(track = lapply(data, function(d) {
@@ -898,7 +1044,7 @@ trk <- reactive({
         # Subset data according to selected dateRangeInput
         ts >= input$daterange[1] & ts <= input$daterange[2]
       )
-    # Assign known EPSG Code to track data
+    # Assign known EPSG Code to tracking data
     track_one <- make_track(dat_df,
                             x, y, ts, id = id,
                             crs = sp::CRS(paste0("+init=epsg:", input$epsg_csv))
@@ -1034,7 +1180,7 @@ trk_df <- reactive({
                                Burst = burst_)
     }
   }
-}) 
+})
 
 # Display data frame of track
 output$contents_trk <- DT::renderDataTable({
@@ -1091,8 +1237,8 @@ output$min_burst_head <- renderText({
 # Only retain bursts with a minimum number of relocations
 output$min_burst <- renderUI({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   numericInput(
     inputId = "min_burst",
@@ -1105,8 +1251,8 @@ output$min_burst <- renderUI({
 # Show headline for bursts data frame
 output$bursts_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, '')
   )
   "No. of Bursts Remaining"
@@ -1114,8 +1260,8 @@ output$bursts_head <- renderText({
 # Table: No. of bursts remaining (given minimum no. of relocations per burst)
 bursts_df <- reactive({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, '')
   )
   # Multiple IDs selected
@@ -1246,24 +1392,24 @@ output$contents_bursts <- DT::renderDataTable({
 # Show headline for time of day drop down
 output$tod_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Time of Day Covariate"
 })
 # Sub headline (instruction when to use)
 output$tod_sub_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Applicable when building a model with integrated step selection function only."
 })
 # Time of Day
 output$tod <- renderUI({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   selectInput(
     inputId = "tod",
@@ -1311,12 +1457,12 @@ tod_df <- reactive({
       showNotification(
         ui = paste0(
           "Interaction terms can be applied only to factors with 2 or more 
-          levels. However, only one factor level remain for the ID(s): ",
+          levels. However, only one factor level remains for the ID(s): ",
           paste0(remove_ids, collapse = ", "), ". Therefore, you cannot add
           interactions with time of day to the model if you decide to keep the 
           affected ID(s). Alternatively, you may adjust the restrictions on 
           bursts, or resample the track differently."),
-        type = "warning",
+        type = "error",
         duration = NULL #45
         )
       # Return data frame sorted by no. of levels
@@ -1422,8 +1568,8 @@ output$contents_tod <- DT::renderDataTable({
 output$env_info_head <- renderText({
   validate(
     need(envInput(), ''),
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Environmental Covariates"
 })
@@ -1431,8 +1577,8 @@ output$env_info_head <- renderText({
 output$env_info_sub_head <- renderText({
   validate(
     need(envInput(), ''),
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
   "Edit names of covariates and convert to categorical or continuous."
 })
@@ -1456,10 +1602,10 @@ env_info <- reactive({
 output$env_df = renderRHandsontable({
   validate(
     need(env(), ''),
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), '')
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, '')
   )
-  rhandsontable(env_info(), rowHeaders = NULL) %>%
+  rhandsontable(env_info(), rowHeaders = NULL, stretchH = "all") %>%
     # Center checkbox column "Categorical"
     hot_col(col = "Categorical", halign = "htCenter")
 })
@@ -1470,8 +1616,8 @@ output$env_df = renderRHandsontable({
 # Show headline for EPSG Code table
 output$modeling_head <- renderText({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, 'Please create a track and add covariates first.')
   )
   "Conditional Logit Model"
@@ -1479,8 +1625,8 @@ output$modeling_head <- renderText({
 # Choose a model
 output$model <- renderUI({
   validate(
-    need((ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0) &&
-           (ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0), ''),
+    need(ifelse(is.null(input$rate_min), -1, input$rate_min) >= 0, ''),
+    need(ifelse(is.null(input$tol_min), -1, input$tol_min) >= 0, ''),
     need(input$min_burst, '')
   )
   selectInput(
@@ -1745,7 +1891,7 @@ mod_pre <- reactive({
         for (j in 1:nrow(t_res)) {
           for (i in 1:length(names(env()))) {
             # Convert to factor
-            if (env_info()$Categorical[i] && 
+            if (env_info()$Categorical[i] &&
                 is.numeric(
                   t_res$steps[[j]][[paste0(names(env())[i], "_end")]])) {
               # Step start (_start)
@@ -1758,7 +1904,7 @@ mod_pre <- reactive({
                 paste0(names(env())[i], "_end")]] <- as.factor(
                   t_res$steps[[j]][[paste0(names(env())[i], "_end")]]
                 )
-            } else if (!env_info()$Categorical[i] && 
+            } else if (!env_info()$Categorical[i] &&
                        is.factor(t_res$steps[[j]][[
                          paste0(names(env())[i], "_end")]])) {
               # Convert to numeric
@@ -1957,6 +2103,12 @@ mod_all_var <- reactive({
   paste0(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5)
 })
 
+# Fit button (to start model fitting)
+fit <- eventReactive(input$fit_button, {
+  # Run model fitting part below
+  mod()
+})
+
 # Clear model button (works for inputs only)
 observeEvent(input$clear_button, {
   shinyjs::reset("modeling_tab")
@@ -1976,8 +2128,7 @@ observeEvent(input$clear_button, {
 mod <- reactive({
   validate(
     need(input$model, 'Please choose a model.'),
-    need(mod_pre(), ''),
-    need(values_model$model_state == 'fit', '')
+    need(mod_pre(), '')
   )
   # Show progress indicator to user
   withProgress(message = 'Fitting model', value = 0.5, {
@@ -2043,12 +2194,12 @@ mod <- reactive({
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
   validate(
-    need(mod(), '')
+    need(values_model$model_state != 'clear', '')
   )
   # Dependent on fit button above
   DT::datatable(
     # Round numeric columns
-    mod() %>% dplyr::mutate_if(is.numeric, round, 4),
+    fit() %>% dplyr::mutate_if(is.numeric, round, 4),
     rownames = FALSE,
     options = list(searching = FALSE, paging = FALSE))
 })
@@ -2097,7 +2248,10 @@ output$report <- downloadHandler(
                    inter_5 = input$inter_5,
                    rand_stps = input$rand_stps,
                    min_burst = input$min_burst,
-                   tod = input$tod,
+                   tod = ifelse(
+                     input$tod == '',  yes = '', no = ifelse(
+                     input$tod, 'Incl. dawn and dusk', 'Excl. dawn and dusk'
+                   )),
                    rand_points = input$rand_points,
                    env_cov = env_info()$Covariate,
                    env_cat = env_info()$Categorical
