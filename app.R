@@ -414,7 +414,7 @@ ui <- dashboardPage(skin = "green",
       tabItem(
         tabName = "plot",
         fluidPage(
-          leafletOutput("mymap")
+          leafletOutput("mymap", height = 1000)
         )
       ),
 
