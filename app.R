@@ -60,12 +60,33 @@ ui <- dashboardPage(skin = "green",
     tabItems(
 
 # Data Upload Tab ---------------------------------------------------------
-
+      
       tabItem(
         tabName = "data",
-        # Sidebar layout with input and output definitions
-        sidebarLayout(
-          sidebarPanel = sidebarPanel(
+        fluidRow(
+          column(
+            width = 12,
+            h4("Upload Tracking Data and Assign Corresponding EPSG Code")
+          )
+        ),
+        fluidRow(
+          column(
+            width = 3,
+            # Example Datasets
+            selectInput(
+              inputId = "ex_data_csv",
+              label = "Load Example Data:",
+              choices = c("None", "Fisher NY")
+            ),
+            # Input: Select EPSG Code
+            selectInput(
+              inputId = "epsg_csv",
+              label = "Assign EPSG Code:",
+              choices = c('', sort(na.omit(epsg_data$code))),
+              selected = 4326 #''
+            )
+          ),
+          column(
             width = 3,
             # Input: Select a file
             fileInput(
@@ -75,13 +96,10 @@ ui <- dashboardPage(skin = "green",
               accept = c("text/csv",
                          "text/comma-separated-values,text/plain", ".csv")
             ),
-            actionButton('reset', 'Reset Input'),
-            # Input: Checkbox if file has header
-            checkboxInput(
-              inputId = "header",
-              label = "File has Header",
-              value = TRUE
-            ),
+            actionButton('reset', 'Reset Input')
+          ),
+          column(
+            width = 2,
             # Input: Select separator
             radioButtons(
               inputId = "sep",
@@ -89,6 +107,15 @@ ui <- dashboardPage(skin = "green",
               choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
               selected = ","
             ),
+            # Input: Checkbox if file has header
+            checkboxInput(
+              inputId = "header",
+              label = "File has Header",
+              value = TRUE
+            )
+          ),
+          column(
+            width = 2,
             # Input: Select quotes
             radioButtons(
               inputId = "quote",
@@ -96,41 +123,104 @@ ui <- dashboardPage(skin = "green",
               choices = c(None = "", "Double Quote" = '"', 
                           "Single Quote" = "'"),
               selected = '"'
-            ),
-            # Horizontal line
-            hr(),
-            # Example Datasets
-            selectInput(
-              inputId = "ex_data_csv",
-              label = "Choose Example Data:",
-              choices = c("None", "Fisher NY")
-            ),
-            # Input: Select EPSG Code
-            selectInput(
-              inputId = "epsg_csv",
-              label = "Assign EPSG Code:",
-              choices = c('', sort(na.omit(epsg_data$code))),
-              selected = 4326 #''
-            ),
-            hr(),
-            #Input: Select data table or summary of data set
-            radioButtons(
-              inputId = "display",
-              label = "Display",
-              choices = c("Data Frame", "Column Summary"),
-              selected = "Data Frame"
             )
-          ),
-          mainPanel = mainPanel(
-            # Add horizontal scroll bar to data table
-            div(
-              style = 'overflow-x: scroll', 
-              DT::dataTableOutput(outputId = "contents")
-            ),
-            verbatimTextOutput(outputId = "summary")
+          )
+        ),
+        br(),
+        fluidRow(
+          column(
+            width = 12,
+            # Tabs within fluid row
+            tabsetPanel(
+              tabPanel(
+                title = "Data Frame",
+                br(),
+                # Add horizontal scroll bar to data table
+                div(
+                  style = 'overflow-x: scroll', 
+                  DT::dataTableOutput(outputId = "contents")
+                )
+              ),
+              tabPanel(
+                title = "Column Summary",
+                br(),
+                verbatimTextOutput(outputId = "summary")    
+              )
+            )
           )
         )
-      ),
+      ),      
+
+      # tabItem(
+      #   tabName = "data",
+      #   # Sidebar layout with input and output definitions
+      #   sidebarLayout(
+      #     sidebarPanel = sidebarPanel(
+      #       width = 3,
+      #       # Input: Select a file
+      #       fileInput(
+      #         inputId = "dataset_csv",
+      #         label = "Choose CSV File",
+      #         multiple = TRUE,
+      #         accept = c("text/csv",
+      #                    "text/comma-separated-values,text/plain", ".csv")
+      #       ),
+      #       actionButton('reset', 'Reset Input'),
+      #       # Input: Checkbox if file has header
+      #       checkboxInput(
+      #         inputId = "header",
+      #         label = "File has Header",
+      #         value = TRUE
+      #       ),
+      #       # Input: Select separator
+      #       radioButtons(
+      #         inputId = "sep",
+      #         label = "Separator",
+      #         choices = c(Comma = ",", Semicolon = ";", Tab = "\t"),
+      #         selected = ","
+      #       ),
+      #       # Input: Select quotes
+      #       radioButtons(
+      #         inputId = "quote",
+      #         label = "Quote",
+      #         choices = c(None = "", "Double Quote" = '"', 
+      #                     "Single Quote" = "'"),
+      #         selected = '"'
+      #       ),
+      #       # Horizontal line
+      #       hr(),
+      #       # Example Datasets
+      #       selectInput(
+      #         inputId = "ex_data_csv",
+      #         label = "Choose Example Data:",
+      #         choices = c("None", "Fisher NY")
+      #       ),
+      #       # Input: Select EPSG Code
+      #       selectInput(
+      #         inputId = "epsg_csv",
+      #         label = "Assign EPSG Code:",
+      #         choices = c('', sort(na.omit(epsg_data$code))),
+      #         selected = 4326 #''
+      #       ),
+      #       hr(),
+      #       #Input: Select data table or summary of data set
+      #       radioButtons(
+      #         inputId = "display",
+      #         label = "Display",
+      #         choices = c("Data Frame", "Column Summary"),
+      #         selected = "Data Frame"
+      #       )
+      #     ),
+      #     mainPanel = mainPanel(
+      #       # Add horizontal scroll bar to data table
+      #       div(
+      #         style = 'overflow-x: scroll', 
+      #         DT::dataTableOutput(outputId = "contents")
+      #       ),
+      #       verbatimTextOutput(outputId = "summary")
+      #     )
+      #   )
+      # ),
 
 # Upload Map Tab ----------------------------------------------------------
 
@@ -450,7 +540,7 @@ csvInput <- reactive({
 # Display data frame or summary of data
 output$contents <- DT::renderDataTable({
   if (!is.null(csvInput())) {
-    if (input$display == "Data Frame") {
+    #if (input$display == "Data Frame") {
       DT::datatable(csvInput(), 
                     rownames = FALSE,
                     options = list(
@@ -459,14 +549,14 @@ output$contents <- DT::renderDataTable({
                       pageLength = 10
                     )
       )
-    }
+    #}
   }
 })
 # Summary
 output$summary <- renderPrint({
-  if (input$display == "Column Summary") {
+  #if (input$display == "Column Summary") {
     summary(object = csvInput())
-  }
+  #}
 })
 
 
