@@ -36,9 +36,9 @@ ui <- dashboardPage(skin = "green",
                     title = "amtGUI",
   
   dashboardHeader(
-    title = "amtGUI - Habitat Selection Analysis",
+    title = "amtGUI",
     # Set width in pixels
-    titleWidth = 400 #180
+    titleWidth = 180
   ),
 
 # Sidebar -----------------------------------------------------------------
@@ -468,9 +468,9 @@ server <- function(input, output, session) {
 # Data Upload -------------------------------------------------------------
 
 
-# input$dataset will be NULL initially. After the user selects
-# and uploads a file, head of that data file by default,
-# or summary if selected, will be shown.
+# input$dataset_csv will be NULL initially. After the user selects
+# and uploads a file its content is shown in a data frame by default
+# or if selected a summary will be shown.
 
 # Increase maximum upload size from 5 MB to 30 MB
 options(shiny.maxRequestSize = 30*1024^2)
@@ -1039,7 +1039,8 @@ output$summary_samp_rate <- DT::renderDataTable({
   if (ifelse(input$id == '', yes = 0, no = length(input$id_trk)) > 1) {
     DT::datatable(
       # Exclude column "unit" (min), rename ID column and round numeric columns
-      samp_rate() %>% select(-unit, ID = id) %>% dplyr::mutate_if(is.numeric, round, 2),
+      samp_rate() %>% select(-unit, ID = id) %>% 
+        dplyr::mutate_if(is.numeric, round, 2),
       rownames = FALSE,
       options = list(searching = FALSE, paging = FALSE
       )
@@ -1071,8 +1072,8 @@ trk_resamp <- reactive({
       }))
   } else {
     # One/ no ID selected
-    trk() %>% track_resample(rate = minutes(input$rate_min),
-                             tolerance = minutes(input$tol_min))
+    trk() %>% amt::track_resample(rate = minutes(input$rate_min),
+                                  tolerance = minutes(input$tol_min))
   }
 })
 #trk_df()####
