@@ -32,11 +32,13 @@ epsg_data <- rgdal::make_EPSG()
 # Header --------------------------------------------------------
 
 ui <- dashboardPage(skin = "green",
+                    # Title of browser tab 
+                    title = "amtGUI",
   
   dashboardHeader(
-    title = "amtGUI",
+    title = "amtGUI - Habitat Selection Analysis",
     # Set width in pixels
-    titleWidth = 180
+    titleWidth = 400 #180
   ),
 
 # Sidebar -----------------------------------------------------------------
@@ -77,19 +79,19 @@ ui <- dashboardPage(skin = "green",
             selectInput(
               inputId = "ex_data_csv",
               label = "Load Example Data:",
-              choices = c("None", "Fisher NY")
+              choices = c("None", "Fisher NY (EPSG Code: 4326)")
             ),
             # Input: Select EPSG Code
             selectizeInput(
               inputId = "epsg_csv",
               label = "Assign EPSG Code:",
               choices = c('', sort(na.omit(epsg_data$code))),
-              selected = 4326, #''
+              selected = '', # 4326 # Example data EPSG code
               options = list(maxOptions = 10000)
             )
           ),
           column(
-            width = 3,
+            width = 3, offset = 1,
             # Input: Select a file
             fileInput(
               inputId = "dataset_csv",
@@ -174,7 +176,7 @@ ui <- dashboardPage(skin = "green",
             uiOutput(outputId = "epsg_env")
           ),
           column(
-            width = 3,
+            width = 3, offset = 1,
             # Input: Select a file
             fileInput(
               inputId = "dataset_env",
@@ -298,6 +300,7 @@ ui <- dashboardPage(skin = "green",
             # Environmental covariates data frame
             rHandsontableOutput(outputId = "env_df"),
             br(),
+            br(),
             # Headline
             h4(textOutput(outputId = "tod_head")),
             # Sub headline (instructions)
@@ -324,7 +327,9 @@ ui <- dashboardPage(skin = "green",
         fluidRow(
           column(
             width = 12,
-            tags$style(type = "text/css", "#mymap {height: calc(100vh - 110px) !important;}"),
+            # Adjust height of map dynamically
+            tags$style(type = "text/css", "#mymap {height: calc(100vh - 110px) 
+                       !important;}"),
             leafletOutput("mymap")
           )
         )
@@ -457,7 +462,7 @@ csvInput <- reactive({
   # No upload
   if (is.null(values_csv$upload_state)){
     switch (input$ex_data_csv,
-            "Fisher NY" = fisher_ny,
+            "Fisher NY (EPSG Code: 4326)" = fisher_ny,
             "None" = return()
     )
   } else if (values_csv$upload_state == 'uploaded') {
@@ -489,7 +494,7 @@ csvInput <- reactive({
   } else if (values_csv$upload_state == 'reset') {
     # Upload reseted
     switch (input$ex_data_csv,
-            "Fisher NY" = fisher_ny,
+            "Fisher NY (EPSG Code: 4326)" = fisher_ny,
             "None" = return()
     )
   }
@@ -623,13 +628,8 @@ output$epsg_env <- renderUI({
     inputId = "epsg_env",
     label = "Assign EPSG Code:", 
     choices = c('', sort(na.omit(epsg_data$code))),
-    selected = 5071, #''
+    selected = '',
     options = list(maxOptions = 10000)
-      # ifelse(!is.null(env()) && !is.null(epsg_env_detected()), 
-      #                 # Multiple matches possible select 1st one by default
-      #                 yes = epsg_env_detected()[1, "EPSG Code(s)"],
-      #                 no = input$epsg_csv
-      #                 )
 )
 })
 
