@@ -60,11 +60,19 @@ ui <- dashboardPage(skin = "green",
 
   dashboardBody(
     tabItems(
-
+      
 # Data Upload Tab ---------------------------------------------------------
       
       tabItem(
         tabName = "data",
+        # Align inputs and buttons (applies to all tabItems)
+        tags$head(
+          tags$style(
+            HTML(
+              ".form-group {margin-bottom: 0 !important;}"
+            )
+          )
+        ),
         fluidRow(
           column(
             width = 12,
@@ -95,7 +103,7 @@ ui <- dashboardPage(skin = "green",
             # Input: Select a file
             fileInput(
               inputId = "dataset_csv",
-              label = "Choose CSV File",
+              label = "Upload CSV File",
               multiple = TRUE,
               accept = c("text/csv",
                          "text/comma-separated-values,text/plain", ".csv")
@@ -180,8 +188,15 @@ ui <- dashboardPage(skin = "green",
             # Input: Select a file
             fileInput(
               inputId = "dataset_env",
-              label = "Choose TIF File",
-              multiple = TRUE
+              label = "Upload TIF File(s)",
+              multiple = TRUE,
+              # Restrict upload to TIF-Files only
+              accept = c(
+                "image/tif",
+                "image/tiff",
+                ".tif",
+                ".tiff"
+              )
             ),
             # Action button to reset input
             actionButton('reset_env', 'Reset Input')
@@ -228,8 +243,20 @@ ui <- dashboardPage(skin = "green",
           column(
             width = 4,
             h4(textOutput(outputId = "resamp_head")),
-            uiOutput(outputId = "rate_min"),
-            uiOutput(outputId = "tol_min"),
+            # Increase distance between numeric Inputs
+            div(
+              style = "height: 75px;", 
+              uiOutput(outputId = "rate_min")
+            ),
+            div(
+              style = "height: 75px;",
+              uiOutput(outputId = "tol_min")
+            ),
+            # Apply min height of selectInputs to dataRangeInput
+            tags$style(
+              type = 'text/css',
+              ".input-daterange input {min-height: 34px; font-size: 14px;}"
+            ),
             uiOutput(outputId = 'fetch_dr')
           )
         ),
@@ -361,19 +388,19 @@ ui <- dashboardPage(skin = "green",
               uiOutput(outputId = "rand_points")
             )
           ),
+          br(),
           fluidRow(
             column(
               width = 4,
-              br(),
               uiOutput(outputId = "mod_var")
             ),
             column(
               width = 3,
-              br(),
               # Select no. of interaction terms to add
               uiOutput(outputId = "inter_no")
             )
           ),
+          br(),
           fluidRow(
             column(
               width = 2,
@@ -530,7 +557,7 @@ output$env_head <- renderText({
     need(csvInput(), 'Please upload tracking data first.'),
     need(input$epsg_csv, 'Please assign an EPSG code to the tracking data first.')
   )
-  "Upload Map of Environmental Covariates and Assign Corresponding EPSG Code"
+  "Upload Map(s) of Environmental Covariates and Assign Corresponding EPSG Code"
 })
 
 # Upload and reset-button to switch between upload and example TIF
