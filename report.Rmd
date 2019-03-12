@@ -32,20 +32,21 @@ params:
 
   
 ---
-<br>
-This user report serves as a simple way to reproduce the results of previous `amtGUI` sessions.  
-You can save this file and reproduce your previous analysis using the input values below.
 
 ***
 
+This user report serves as a simple way to reproduce the results of previous `amtGUI` sessions. Simply save or print this file and reproduce your previous analysis using the input values below.
+
+<br>
+
 ##### Uploaded dataset
 ```{r csv Input, echo=FALSE}
-params$dataset[-4]
+params$dataset[1]
 ```
 
 ##### Uploaded environmental data
 ```{r environment, echo=FALSE}
-params$dataset_env[-4]
+params$dataset_env[1]
 ```
 
 ##### EPSG code assigned to csv
@@ -110,14 +111,8 @@ params$min_burst
 
 ##### Environmental covariates
 ```{r echo=FALSE}
-params$env_cov
+data.frame(Name = params$env_cov, Categorical = params$env_cat)
 ```
-
-##### Transformed into categorical?
-```{r}
-params$env_cat
-```
-
 
 ##### Time of day included?
 ```{r echo=FALSE}
