@@ -12,12 +12,6 @@ You can run `amtGUI` from github with:
 
 ``` r
 # install.packages("shiny")
-# install.packages("shinydashboard")
-# install.packages("shinyjs")
-# install.packages("amt")
-# install.packages("rhandsontable")
-# install.packages("leaflet")
-# install.packages("tidyverse")
 runGitHub( "amtGUI", "abuchmueller") 
 ```
 
