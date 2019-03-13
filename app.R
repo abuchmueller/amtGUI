@@ -1753,6 +1753,7 @@ mod_pre <- reactive({
       validate(
         need(input$rand_points, '')
       )
+      set.seed(12345)
       t_res <- t_res %>% mutate(points = lapply(track, function(x) {
         x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
           amt::random_points(n = input$rand_points) %>% 
@@ -1786,6 +1787,7 @@ mod_pre <- reactive({
       )
       # Time of day is not selected
       if (input$tod == '') {
+        set.seed(12345)
         t_res <- t_res %>%
           mutate(steps = lapply(track, function(x) {
             x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
@@ -1835,6 +1837,7 @@ mod_pre <- reactive({
         t_res
       } else {
         # A time of day option is selected 
+        set.seed(12345)
         t_res <- t_res %>% 
           mutate(steps = lapply(track, function(x) {
             x %>% amt::filter_min_n_burst(min_n = input$min_burst) %>% 
