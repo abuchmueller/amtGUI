@@ -53,7 +53,8 @@ ui <- dashboardPage(skin = "green",
       menuSubItem("Create Track", tabName = "track", icon = icon("map-marked-alt")),
       menuSubItem("Add Covariates", tabName = "covariates", icon = icon("plus-square"))),
       menuItem("Modeling", tabName = "model", icon = icon("table")),
-      menuItem("Interactive Map", tabName = "plot", icon = icon("globe-americas"))
+      menuItem("Interactive Map", tabName = "plot", icon = icon("globe-americas")),
+      menuItem("Help", tabName = "help", icon = icon("question-circle"))
     )),
 
 # Body ----------------------------------------------------------
@@ -449,7 +450,20 @@ ui <- dashboardPage(skin = "green",
             DT::dataTableOutput(outputId = "contents_mod")
           )
         )
-      )
+      ),
+
+
+# README ------------------------------------------------------------
+
+tabItem(
+  tabName = "help",
+  fluidRow(
+    column(
+      width = 12,
+      includeHTML("help.html")
+    )
+  )
+)
 
 # End tabItems (insert a new tabItem above)
 )
