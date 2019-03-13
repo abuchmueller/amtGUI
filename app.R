@@ -624,11 +624,13 @@ envInput <- reactive({
     )
   }
 })
-# Rename environmental data input if required
+# Rename environmental data input
 env <- reactive({
-  if (is.null(env_info())) {
+  # No handsontable input
+  if (is.null(input$env_df)) {
     envInput()
   } else {
+    # Handsontable input
     env_renamed <- envInput()
     names(env_renamed) <- env_info()$Covariate
     env_renamed
