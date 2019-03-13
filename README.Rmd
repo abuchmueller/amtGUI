@@ -85,7 +85,7 @@ If you want to save your analysis to recreate it later you can download a report
 
 ## Interactive Map
 
-Here you can take visualize your data set for one animal at a time or the whole data set. If supplied the app with ID's in the "Create Track" tab and only choose ***one*** active ID ***or no*** ID at all, you can see an interactive map here.
+Here you can take visualize your data set for one animal at a time or the whole data set. If you supplied the app with ID's in the "Create Track" tab and only choose ***one*** active ID ***or no*** ID at all, you can see an interactive map here.
 
 ![Add Covariates](img/intmap-wide.png)
 
