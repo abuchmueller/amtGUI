@@ -2089,7 +2089,7 @@ mod <- reactive({
         points, ~ amt::fit_rsf(., as.formula(paste("case_ ~", mod_all_var())))))
       # Data frame with coefficients
       rsf_multi %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
-        select(id, coef) %>% unnest() %>% tibble::as.tibble()
+        select(id, coef) %>% unnest()
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
@@ -2104,7 +2104,7 @@ mod <- reactive({
               )))))
       # Data frame with coefficients
       issf_multi_fit %>% mutate(coef = map(fit, ~ broom::tidy(.x$model))) %>% 
-        select(id, coef) %>% unnest() %>% tibble::as.tibble()
+        select(id, coef) %>% unnest()
     }
   } else {
     # One/ no ID selected (single model)
@@ -2117,7 +2117,7 @@ mod <- reactive({
       rsf_one_fit <- mod_pre() %>% 
         amt::fit_rsf(as.formula(paste("case_ ~", mod_all_var())))
       # Data frame with coefficients
-      broom::tidy(rsf_one_fit$model) %>% tibble::as.tibble()
+      broom::tidy(rsf_one_fit$model)
       
     } else if (input$model == "Integrated Step Selection Function") {
       validate(
@@ -2129,7 +2129,7 @@ mod <- reactive({
           as.formula(paste("case_ ~", mod_all_var(), "+ strata(step_id_)"))
           )
       # Data frame with coefficients
-      broom::tidy(issf_one_fit$model) %>% tibble::as.tibble()
+      broom::tidy(issf_one_fit$model)
     }
   }
 })
