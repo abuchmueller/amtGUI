@@ -2,7 +2,7 @@
 output:  html_document
 bibliography: ref.bib
 nocite: | 
-  @LaPoint2013, @lavgar2016integrated, @signer2019animal, @avgar2017relative, @thurfjell2014applications, @lele2013selection, @duchesne2015equivalence
+  @LaPoint2013, @lavgar2016integrated, @signer2019animal, @avgar2017relative, @thurfjell2014applications, @lele2013selection, @duchesne2015equivalence, @avgar2016iSSA
 ---
 
 <!-- HELP.md is generated from HELP.Rmd Please edit that file -->

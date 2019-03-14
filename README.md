@@ -80,6 +80,8 @@ References & recommended further readings
 
 Avgar, Tal, Subhash R Lele, Jonah L Keim, and Mark S Boyce. 2017. “Relative Selection Strength: Quantifying Effect Size in Habitat-and Step-Selection Inference.” *Ecology and Evolution* 7 (14). Wiley Online Library: 5322–30.
 
+Avgar, Tal, Jonathan R. Potts, Mark A. Lewis, and Mark S. Boyce. 2016. “Integrated Step Selection Analysis: Bridging the Gap Between Resource Selection and Animal Movement.” *Methods in Ecology and Evolution* 7 (5): 619–30. doi:[10.1111/2041-210X.12528](https://doi.org/10.1111/2041-210X.12528).
+
 Duchesne, Thierry, Daniel Fortin, and Louis-Paul Rivest. 2015. “Equivalence Between Step Selection Functions and Biased Correlated Random Walks for Statistical Inference on Animal Movement.” *PloS One* 10 (4). Public Library of Science: e0122947.
 
 LaPoint, Scott, Paul Gallery, Martin Wikelski, and Roland Kays. 2013. “Animal Behavior, Cost-Based Corridor Models, and Real Corridors.” *Landscape Ecology* 28 (8): 1615–30. doi:[10.1007/s10980-013-9910-0](https://doi.org/10.1007/s10980-013-9910-0).
