@@ -1,5 +1,8 @@
 ---
 output: github_document
+bibliography: ref.bib
+nocite: | 
+  @LaPoint2013, @lavgar2016integrated, @signer2019animal, @avgar2017relative, @thurfjell2014applications, @lele2013selection, @duchesne2015equivalence 
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -10,7 +13,6 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "img/"
 )
-options(width = 100)
 ```
 
 # amtGUI
@@ -28,7 +30,7 @@ runGitHub( "amtGUI", "abuchmueller")
 
 ## Getting started
 
-To get started you will need two things: A dataset containing GPS data of at least one animal and a map containing environmental covariates for land use or sea level (usually in form of a .tif image) for the underlying area of study.
+To get started you will need two things: A dataset containing GPS data of at least one animal and a map containing environmental covariates for land use or sea level (usually in form of a .tif raster image) for the underlying area of study.
 
 However, `amtGUI` comes with examples for both so you can get started immediately.
 
@@ -82,4 +84,6 @@ If you want to save your analysis to recreate it later you can download a report
 Here you can take visualize your data set for one animal at a time or the whole data set. If you supplied the app with ID's in the "Create Track" tab and only choose ***one*** active ID ***or no*** ID at all, you can see an interactive map here.
 
 ![Add Covariates](img/intmap-wide.png)
+
+## References & recommended further readings
 

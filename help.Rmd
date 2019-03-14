@@ -1,5 +1,8 @@
 ---
 output:  html_document
+bibliography: ref.bib
+nocite: | 
+  @LaPoint2013, @lavgar2016integrated, @signer2019animal, @avgar2017relative, @thurfjell2014applications, @lele2013selection, @duchesne2015equivalence
 ---
 
 <!-- HELP.md is generated from HELP.Rmd Please edit that file -->
@@ -11,6 +14,7 @@ knitr::opts_chunk$set(
   fig.path = "img/"
 )
 ```
+
 ## Getting started
 
 To get started you will need two things: A dataset containing GPS data of at least one animal and a map containing environmental covariates for land use or sea level (usually in form of a .tif image) for the underlying area of study.
@@ -62,9 +66,24 @@ To fit an iSSF you need to select the input variables you want to use. Besides y
 
 If you want to save your analysis to recreate it later you can download a report file by clicking the "Download report" button which will create a report containing all entered user inputs.
 
+### Interpreting your results
+
+In `amtGUI` two functions are offered for modeling. One is the Resource Selection Function (RSF) and the other the (integrated) Step Selection Function (ISSF). Interpretation of your results depends on which type of model you chose to fit. Further readings in the reference section cover this more in-depth.
+
+#### Resource selection functions
+Since RSF's are conditional logit functions our results are now interpretable in terms of log-odds.
+However, Avgar [-@avgar2017relative] suggests an interpretation of the coefficients as Relative Selection Strength (RSS) is correct. Generally speaking the relative risk is the ratio of a probability that an event will occur in a treatment group to the probability of the same event occurring in a control group. In context of habitat selection it is referred to as the RSS [@avgar2017relative]. For example a RSS of 5 between locations 1 and 2 means an animal is five times more likely to choose location 1 over 2.
+
+#### (Integrated) Step selection functions
+The interpretation depends on which covariates you have chosen and in which combination. It depends on which question you want to answer. It is also important whether covariate values are extracted at the beginning or at the end of a step, since it is possible to extract the covariate values at the beginning or at the end. If the covariates are extracted at the end of a step, then you investigate the habitat selection process. The covariates are included in the model as main effects to answer questions like: where does the animal move? 
+If covariates are extracted at the beginning of each step they are typically included in the model as an interaction with motion properties, i.e. stride length, stride length protocol or cosine of rotation angle, to test hypotheses whether animals move faster or more directed when they start in a particular habitat? In the case that covariates are integrated into the model, which are extracted at the beginning and end of a step, questions can be asked such as: Do animals tend to stay in a particular habitat when they are already in the same habitat? [see @signer2019animal]
+
+
 ## Interactive Map
 
 Here you can take visualize your data set for one animal at a time or the whole data set. If you supplied the app with ID's in the "Create Track" tab and only choose ***one*** active ID ***or no*** ID at all, you can see an interactive map here.
 
 ![](img/intmap-wide.png)
+
+## References & recommended further readings
 

@@ -18,7 +18,7 @@ runGitHub( "amtGUI", "abuchmueller")
 Getting started
 ---------------
 
-To get started you will need two things: A dataset containing GPS data of at least one animal and a map containing environmental covariates for land use or sea level (usually in form of a .tif image) for the underlying area of study.
+To get started you will need two things: A dataset containing GPS data of at least one animal and a map containing environmental covariates for land use or sea level (usually in form of a .tif raster image) for the underlying area of study.
 
 However, `amtGUI` comes with examples for both so you can get started immediately.
 
@@ -74,3 +74,18 @@ Interactive Map
 Here you can take visualize your data set for one animal at a time or the whole data set. If you supplied the app with ID's in the "Create Track" tab and only choose ***one*** active ID ***or no*** ID at all, you can see an interactive map here.
 
 ![Add Covariates](img/intmap-wide.png)
+
+References & recommended further readings
+-----------------------------------------
+
+Avgar, Tal, Subhash R Lele, Jonah L Keim, and Mark S Boyce. 2017. “Relative Selection Strength: Quantifying Effect Size in Habitat-and Step-Selection Inference.” *Ecology and Evolution* 7 (14). Wiley Online Library: 5322–30.
+
+Duchesne, Thierry, Daniel Fortin, and Louis-Paul Rivest. 2015. “Equivalence Between Step Selection Functions and Biased Correlated Random Walks for Statistical Inference on Animal Movement.” *PloS One* 10 (4). Public Library of Science: e0122947.
+
+LaPoint, Scott, Paul Gallery, Martin Wikelski, and Roland Kays. 2013. “Animal Behavior, Cost-Based Corridor Models, and Real Corridors.” *Landscape Ecology* 28 (8): 1615–30. doi:[10.1007/s10980-013-9910-0](https://doi.org/10.1007/s10980-013-9910-0).
+
+Lele, Subhash R, Evelyn H Merrill, Jonah Keim, and Mark S Boyce. 2013. “Selection, Use, Choice and Occupancy: Clarifying Concepts in Resource Selection Studies.” *Journal of Animal Ecology* 82 (6). Wiley Online Library: 1183–91.
+
+Signer, Johannes, John Fieberg, and Tal Avgar. 2019. “Animal Movement Tools (Amt): R Package for Managing Tracking Data and Conducting Habitat Selection Analyses.” *Ecology and Evolution* 9 (2). Wiley Online Library: 880–90.
+
+Thurfjell, Henrik, Simone Ciuti, and Mark S Boyce. 2014. “Applications of Step-Selection Functions in Ecology and Conservation.” *Movement Ecology* 2 (1). BioMed Central: 4.
