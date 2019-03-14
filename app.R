@@ -1735,7 +1735,7 @@ output$inter_5 <- renderUI({
   )
 })
 
-# Fit model (data preparation)
+# Model preparation ----
 mod_pre <- reactive({
   validate(
     need(trk_resamp(), ''),
@@ -1848,7 +1848,7 @@ mod_pre <- reactive({
                      cos_ta_ = cos(ta_)
               ) %>%
               # Add time of day
-              time_of_day(include.crepuscule = input$tod)
+              amt::time_of_day(include.crepuscule = input$tod)
           }))
         # Convert environmental covariates to factor or numeric
         for (j in 1:nrow(t_res)) {
@@ -1902,8 +1902,6 @@ mod_pre <- reactive({
         amt::extract_covariates(env(), where = "both")
       
       # Convert environmental covariates to factor or numeric
-      # where = "both" doesn't apply to random points unlike 
-      # random steps (ISSF) i.e. we don't need to convert point start and end 
       for (i in 1:length(names(env()))) {
         # Convert to factor
         if (env_info()$Categorical[i] &&
@@ -1974,7 +1972,7 @@ mod_pre <- reactive({
                  cos_ta_ = cos(ta_)
           ) %>%
           # Add time of day
-          time_of_day(include.crepuscule = input$tod)
+          amt::time_of_day(include.crepuscule = input$tod)
         
         # Convert environmental covariates to factor or numeric
         for (i in 1:length(names(env()))) {
@@ -2065,6 +2063,8 @@ mod_all_var <- reactive({
   # Concatenate all variable types
   paste0(p_var, p_inter_1, p_inter_2, p_inter_3, p_inter_4, p_inter_5)
 })
+
+# Model fitting ----
 
 # Fit button (to start model fitting)
 fit <- eventReactive(input$fit_button, {
@@ -2157,7 +2157,7 @@ mod <- reactive({
 # Output data frame with coefficients
 output$contents_mod <- DT::renderDataTable({
   validate(
-    need(values_model$model_state != 'clear', '')
+    need(values_model$model_state == 'fit', '')
   )
   # Dependent on fit button above
   DT::datatable(
