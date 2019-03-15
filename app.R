@@ -2090,7 +2090,7 @@ observeEvent(input$clear_button, {
 # Fit model
 mod <- reactive({
   validate(
-    need(input$model, 'Please choose a model.'),
+    need(input$model, ''),
     need(mod_pre(), '')
   )
   # Show progress indicator to user
