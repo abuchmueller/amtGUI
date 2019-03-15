@@ -144,16 +144,14 @@ params$mod_var
 params$inter_no
 ```
 
-##### Interaction terms used (if any)
+##### Interaction terms used
 ```{r echo=FALSE}
 if (is.null(params$inter_1)) {
   return("None used")
 } else {
-  params$inter_1
-  params$inter_2
-  params$inter_3
-  params$inter_4
-  params$inter_5 
+  l <- list(params$inter_1, params$inter_2, params$inter_3, params$inter_4, params$inter_5)
+  l2 <- l[1:params$inter_no]
+  return(l2)
 }
 ```
 
