@@ -2,6 +2,7 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 amtGUI
 ======
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 The goal of `amtGUI` is to provide a simple user interface to `amt` with Shiny for the analysis of animal telemetry data. This `README` shows how to use the app. For a detailed explanation of how the app and it's underlying calculations work consider reading the term paper.
 
@@ -91,3 +92,7 @@ Lele, Subhash R, Evelyn H Merrill, Jonah Keim, and Mark S Boyce. 2013. “Select
 Signer, Johannes, John Fieberg, and Tal Avgar. 2019. “Animal Movement Tools (Amt): R Package for Managing Tracking Data and Conducting Habitat Selection Analyses.” *Ecology and Evolution* 9 (2). Wiley Online Library: 880–90.
 
 Thurfjell, Henrik, Simone Ciuti, and Mark S Boyce. 2014. “Applications of Step-Selection Functions in Ecology and Conservation.” *Movement Ecology* 2 (1). BioMed Central: 4.
+
+License
+---------------
+See [LICENSE](../blob/master/LICENSE)
