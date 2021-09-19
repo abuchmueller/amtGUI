@@ -95,4 +95,4 @@ Thurfjell, Henrik, Simone Ciuti, and Mark S Boyce. 2014. “Applications of Step
 
 License
 ---------------
-See [LICENSE](../blob/master/LICENSE)
+See [LICENSE](../master/LICENSE)
